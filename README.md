@@ -56,9 +56,9 @@ Communication with WebWorkers is done using [postMessage](https://developer.mozi
 
 ### Example WebWorkerService setup and usage. 
 
+Program.cs  
 ```cs
-// Program.cs
-...
+// ...
 using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.WebWorkers;
 
