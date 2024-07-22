@@ -15,7 +15,7 @@
 - Blazor WebAssembly .Net 6, 7, and 8 
 - - Tested VS Template: Blazor WebAssembly Standalone App
 - Blazor United .Net 8 (in WebAssembly project only) 
-- - Tested VS Template: Blazor Web App (Auto or WebAssembly interactive mode with pre-rendering disabled)
+- - Tested VS Template: Blazor Web App (Auto or WebAssembly interactive mode with prerendering disabled)
 
 Tested working in the following browsers (tested with .Net 8.) Chrome Android does not currently support SharedWorkers. 
 
