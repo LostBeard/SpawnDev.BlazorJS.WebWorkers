@@ -8,12 +8,6 @@
 - Supports and uses transferable objects whenever possible
 - Run Blazor WASM in a Service Worker
 
-# NuGet
-| Package | Description |
-|---------|-------------|
-|**[SpawnDev.BlazorJS](https://github.com/LostBeard/SpawnDev.BlazorJS)** <br /> [![NuGet version](https://badge.fury.io/nu/SpawnDev.BlazorJS.svg)](https://www.nuget.org/packages/SpawnDev.BlazorJS)| Full Blazor WebAssembly Javascript interop | 
-|**[SpawnDev.BlazorJS.WebWorkers](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers)** <br /> [![NuGet version](https://badge.fury.io/nu/SpawnDev.BlazorJS.WebWorkers.svg)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers)| Blazor WASM WebWorkers, SharedWebWorkers, and ServiceWorker |
-
 [Demo](https://blazorjs.spawndev.com/)  
 
 ### Supported .Net Versions
