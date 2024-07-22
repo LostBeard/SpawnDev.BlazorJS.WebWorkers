@@ -488,12 +488,13 @@ index.html (partial view)
 ```
 
 ## ServiceWorker
-As of version 2.2.21 SpawnDev.BlazorJS.WebWorkers supports running Blazor WASM apps in ServiceWorkers. Your app can now register a class to run in the ServiceWorker to handle ServiceWorker events.
+SpawnDev.BlazorJS.WebWorkers supports running in a ServiceWorker. It is as simple as registering a class to run in the ServiceWorker to handle ServiceWorker events.
 
-#### wwwroot/service-worker.js
-Delete or comment out any code in your service-worker.js and service-worker.published.js files. SpawnDev.BlazorJS.WebWorkers will load its Blazor loader instead (`spawndev.blazorjs.webworkers.js`)
-
-WARNING: Do not delete the service-worker.js or service-worker.published.js files if you are using the `<ServiceWorkerAssetsManifest>` tag in your project's .csproj file to create an assets manifest for a PWA, or an exception will be thrown when the project builds.
+#### wwwroot/index.html
+Remove the serviceWorker registration from `index.html` (default for PWA Blazor WASM apps). SpawnDev.BlazorJS.WebWorkers will register the service worker on its own when called in the `Program.cs`.
+  
+Delete below line (if found) in `index.html`:  
+`<script>navigator.serviceWorker.register('service-worker.js');</script>`
 
 ### Program.cs
 A minimal Program.cs
@@ -599,6 +600,11 @@ public class AppServiceWorker : ServiceWorkerEventHandler
     }
 }
 ```
+
+#### wwwroot/service-worker.js
+The files wwwroot/service-worker.js and wwwroot/service-worker.published.js can be ignored as they will not be used. SpawnDev.BlazorJS.WebWorkers will load its own script instead: `spawndev.blazorjs.webworkers.js`
+
+WARNING: Do not delete the service-worker.js or service-worker.published.js files if you are using the `<ServiceWorkerAssetsManifest>` tag in your project's .csproj file to create an assets manifest for a PWA, or an exception will be thrown when the project builds.
 
 # Blazor Web App compatibility
 .Net 8 introduced a new hosting model that allows mixing [Blazor server render mode](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/render-modes?view=aspnetcore-8.0#interactive-server-side-rendering-interactive-ssr) and [Blazor WebAssembly render mode](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/render-modes?view=aspnetcore-8.0#client-side-rendering-csr). [Prerendering](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/render-modes?view=aspnetcore-8.0#prerendering) was also added to improve initial rendering times. "Prerendering is the process of initially rendering page content on the server without enabling event handlers for rendered controls." 

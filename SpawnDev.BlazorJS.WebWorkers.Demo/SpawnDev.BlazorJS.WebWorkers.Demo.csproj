@@ -17,7 +17,6 @@
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-		<PackageReference Include="SpawnDev.BlazorJS" Version="2.4.5" />
 		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="2.4.5" />
 	</ItemGroup>
 
@@ -29,9 +28,9 @@
 		- Patching can be done at runtime in Javascript, or at build time. 
 		- Build time patching gives better performance and works with stricter ContentSecurityPolicy rules
 		- false - patch at runtime (current default)
-		- true  - patch during build
-		!! NOTE - Not currently compatible with PWA using an asset manifest because some assets are modified and their hash is not currently updated.
-		          This will be fixed in a fututre release.
+		- true  - patch during build (Not currently PWA compatible)
+		! NOTE - Not currently compatible with PWA using an asset manifest because some assets are modified and their hash is not currently updated.
+		! This will be fixed in a future release.
 		-->
 		<WebWorkerPatchFramework>true</WebWorkerPatchFramework>
 	</PropertyGroup>
