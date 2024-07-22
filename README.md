@@ -4,7 +4,7 @@
 
 - Easily call Blazor Services in separate threads with WebWorkers and SharedWebWorkers 
 - Works in Blazor WASM .Net 6, 7, and 8.
-- Does not require SharedArrayBuffer and therefore does not require the special HTTP headers associated with using it.
+- SharedArrayBuffer is not required and therefore no special HTTP headers to configure.
 - Supports and uses transferable objects whenever possible
 - Run Blazor WASM in a Service Worker
 
