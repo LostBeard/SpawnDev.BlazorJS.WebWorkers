@@ -8,7 +8,7 @@
 - Supports and uses transferable objects whenever possible
 - Run Blazor WASM in a Service Worker
 
-[Demo](https://blazorjs.spawndev.com/)  
+[Live Demo](https://blazorjs.spawndev.com/)  
 
 ### Supported .Net Versions
 - Blazor WebAssembly .Net 6, 7, and 8 
