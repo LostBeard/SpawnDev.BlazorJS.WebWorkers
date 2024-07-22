@@ -3,8 +3,9 @@
 [![NuGet](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=SpawnDev.BlazorJS.WebWorkers)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers) 
 
 - Easily call Blazor Services in separate threads with WebWorkers and SharedWebWorkers 
+- Call services in other Windows
 - Works in Blazor WASM .Net 6, 7, and 8.
-- SharedArrayBuffer is not required and therefore no special HTTP headers to configure.
+- SharedArrayBuffer is not required, so no special HTTP headers to configure.
 - Supports and uses transferable objects whenever possible
 - Run Blazor WASM in a Service Worker
 
