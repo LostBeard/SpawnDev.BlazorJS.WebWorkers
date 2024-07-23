@@ -55,7 +55,7 @@ The WebWorkerService singleton contains many methods for working with multiple i
 - WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app.
 
 #### When threading is officially added to Blazor WASM, will SpawnDev.BlazorJS.WebWorkers no longer be supported?
-- SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. I expect official multi-threading to make WebWorkers more useful and I will continue to support WebWorkers and improve on it.
+- SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. We expect official multi-threading to make WebWorkers more useful and we will continue to support and improve WebWorkers.
 
 #### Serialization and WebWorkers
 - Communication with WebWorkers is done using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage). Because postMessage is a Javascript method, the data passed to it will be serialized and deserialized using the JSRuntime serializer. Not all .Net types are supported by the JSRuntime serializer so calling methods with unsupported parameter or return types will throw an exception.
