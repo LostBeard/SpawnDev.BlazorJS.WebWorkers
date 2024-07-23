@@ -45,20 +45,20 @@ The WebWorkerService singleton contains many methods for working with multiple i
 ### Notes and Common Issues or Questions
 - WebWorkers are separate instances of your Blazor WASM app running in [Workers](https://developer.mozilla.org/en-US/docs/Web/API/Worker). These instances are called into using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage).
 
-#### Developer console shows blazor startup message more than once.
+#### Serialization and WebWorkers
+- Communication with WebWorkers is done using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage). Because postMessage is a Javascript method, the data passed to it will be serialized and deserialized using the JSRuntime serializer. While SpawnDev.BlazorJS does add support for additional data types, not all .Net types are supported. So calling methods with an unsupported parameter or return type will throw an exception.
+
+#### Why does the developer console shows blazor startup message more than once?
 - Workers share the window's console. Startup messages and other console messages from them is normal.
 
-#### Missing Javascript dependencies in WebWorkers
-- See [Javascript dependencies in WebWorkers](#javascript-dependencies-in-webworkers)
-
-#### Static variable changes in a window or worker are not visible in other instances
-- WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app.
+#### When I change a static variable in a Window it does it not change in a worker. Why is that?
+- SpawnDev.BlazorJS.WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app. Static variables are not shared.
 
 #### When threading is officially added to Blazor WASM, will SpawnDev.BlazorJS.WebWorkers no longer be supported?
 - SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. We expect official multi-threading to make WebWorkers more useful and we will continue to support and improve WebWorkers.
 
-#### Serialization and WebWorkers
-- Communication with WebWorkers is done using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage). Because postMessage is a Javascript method, the data passed to it will be serialized and deserialized using the JSRuntime serializer. Not all .Net types are supported by the JSRuntime serializer so calling methods with unsupported parameter or return types will throw an exception.
+#### Missing Javascript dependencies in WebWorkers
+- See [Javascript dependencies in WebWorkers](#javascript-dependencies-in-webworkers)
 
 ### Example WebWorkerService setup and usage. 
 
