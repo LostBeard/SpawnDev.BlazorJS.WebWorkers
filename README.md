@@ -42,17 +42,23 @@ The WebWorkerService singleton contains many methods for working with multiple i
 - [**GetWebWorker**](#webworker) - This async method creates and returns a new instance of WebWorker when it is ready.
 - [**GetSharedWebWorker**](#sharedwebworker) - This async method returns an instance of SharedWebWorker with the given name, accessible by all Blazor instances. The worker is created the if it does not already exist. 
 
-### Notes and Common Issues
-WebWorkers are separate instances of your Blazor WASM app running in [Workers](https://developer.mozilla.org/en-US/docs/Web/API/Worker). These instances are called into using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage).
+### Notes and Common Issues or Questions
+- WebWorkers are separate instances of your Blazor WASM app running in [Workers](https://developer.mozilla.org/en-US/docs/Web/API/Worker). These instances are called into using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage).
 
 #### Developer console shows blazor startup message more than once.
-Workers share the window's console. Startup messages and other console messages from them is normal.
+- Workers share the window's console. Startup messages and other console messages from them is normal.
 
 #### Missing Javascript dependencies in WebWorkers
-See [Javascript dependencies in WebWorkers](#javascript-dependencies-in-webworkers)
+- See [Javascript dependencies in WebWorkers](#javascript-dependencies-in-webworkers)
+
+#### Static variable changes in a window or worker are not visible in other instances
+- WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app.
+
+#### When threading is officially added to Blazor WASM, will SpawnDev.BlazorJS.WebWorkers no longer be supported?
+- SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. I expect official multi-threading to make WebWorkers more useful and I will continue to support WebWorkers and improve on it.
 
 #### Serialization and WebWorkers
-Communication with WebWorkers is done using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage). Because postMessage is a Javascript method, the data passed to it will be serialized and deserialized using the JSRuntime serializer. Not all .Net types are supported by the JSRuntime serializer so calling methods with unsupported parameter or return types will throw an exception.
+- Communication with WebWorkers is done using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage). Because postMessage is a Javascript method, the data passed to it will be serialized and deserialized using the JSRuntime serializer. Not all .Net types are supported by the JSRuntime serializer so calling methods with unsupported parameter or return types will throw an exception.
 
 ### Example WebWorkerService setup and usage. 
 
@@ -389,7 +395,7 @@ var workerMathService = webWorker.GetService<IMathService>();
 // Call async methods on your worker service 
 var result = await workerMathService.CalculatePi(piDecimalPlaces);
 
-// Action types can be passed for progress reporting
+// Action types can be passed for progress reporting (Func not currently supported)
 var result = await workerMathService.CalculatePiWithActionProgress(piDecimalPlaces, new Action<int>((i) =>
 {
     // the worker thread can call this method to report progress if desired
@@ -486,7 +492,9 @@ index.html (partial view)
 ```
 
 ## ServiceWorker
-SpawnDev.BlazorJS.WebWorkers supports running in a ServiceWorker. It is as simple as registering a class to run in the ServiceWorker to handle ServiceWorker events.
+SpawnDev.BlazorJS.WebWorkers supports running in a ServiceWorker. It is as simple as registering a class to run in the ServiceWorker to handle events.
+
+- See: [BlazorServiceWorkerDemo](https://github.com/LostBeard/BlazorServiceWorkerDemo)
 
 #### wwwroot/index.html
 Remove the serviceWorker registration from `index.html` (default for PWA Blazor WASM apps). SpawnDev.BlazorJS.WebWorkers will register the service worker on its own when called in the `Program.cs`.
