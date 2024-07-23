@@ -1,0 +1,46 @@
+name: Deploy to GitHub Pages
+
+# Run workflow on every push to the master branch
+on: workflow_dispatch
+
+jobs:
+  deploy-to-github-pages:
+    permissions:
+      contents: write
+    # use ubuntu-latest image to run steps on
+    runs-on: ubuntu-latest
+    steps:
+    # uses GitHub's checkout action to checkout code form the master branch
+    - uses: actions/checkout@v2
+    
+    # sets up .NET Core SDK
+    - name: Setup .NET Core SDK
+      uses: actions/setup-dotnet@v3.0.3
+      with:
+        dotnet-version: 8.0.400-preview.0.24324.5
+
+    # Install dotnet wasm buildtools workload
+    - name: Install .NET WASM Build Tools
+      run: dotnet workload install wasm-tools        
+
+    # publishes Blazor project to the publish-folder
+    - name: Publish .NET Core Project
+      run: dotnet publish ./SpawnDev.BlazorJS.WebWorkers.Demo/ --nologo -c:Release --output publish
+
+    # changes the base-tag in index.html from '/' to '/SpawnDev.BlazorJS.WebWorkers/' to match GitHub Pages repository subdirectory
+    - name: Change base-tag in index.html from / to /SpawnDev.BlazorJS.WebWorkers/
+      run: sed -i 's/<base href="\/"/<base href="\/SpawnDev.BlazorJS.WebWorkers\/"/g' publish/wwwroot/index.html
+    
+    # copy index.html to 404.html to serve the same file when a file is not found
+    - name: copy index.html to 404.html
+      run: cp publish/wwwroot/index.html publish/wwwroot/404.html
+
+    # add .nojekyll file to tell GitHub pages to not treat this as a Jekyll project. (Allow files and folders starting with an underscore)
+    - name: Add .nojekyll file
+      run: touch publish/wwwroot/.nojekyll      
+      
+    - name: Commit wwwroot to GitHub Pages
+      uses: JamesIves/github-pages-deploy-action@v4.4.1
+      with:
+        branch: gh-pages
+        folder: publish/wwwroot    
