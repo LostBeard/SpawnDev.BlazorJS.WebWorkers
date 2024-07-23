@@ -77,11 +77,9 @@ builder.Services.AddWebWorkerService(webWorkerService =>
     webWorkerService.TaskPool.MaxPoolSize = 2;
     // Below is telling the WebWorkerService TaskPool to set the initial size to 2 if running in a Window scope and 0 otherwise
     // This starts up 2 WebWorkers to handle TaskPool tasks as needed
-    // Setting this to -1 will set the initial pool size to max pool size
     webWorkerService.TaskPool.PoolSize = webWorkerService.GlobalScope == GlobalScope.Window ? 2 : 0;
 });
-// Add services
-builder.Services.AddSingleton<IFaceAPIService, FaceAPIService>();
+// Other misc. services
 builder.Services.AddSingleton<IMathService, MathService>();
 builder.Services.AddScoped((sp) => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 // ...
