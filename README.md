@@ -54,7 +54,7 @@ The WebWorkerService singleton contains many methods for working with multiple i
 #### When I change a static variable in a Window it does it not change in a worker. Why is that?
 - SpawnDev.BlazorJS.WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app. Static variables are not shared.
 
-#### When threading is officially added to Blazor WASM, will SpawnDev.BlazorJS.WebWorkers no longer be supported?
+#### When threading is officially added to Blazor WASM, will SpawnDev.BlazorJS.WebWorkers still be supported?
 - SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. We expect official multi-threading to make WebWorkers more useful and we will continue to support and improve WebWorkers.
 
 #### Missing Javascript dependencies in WebWorkers
@@ -648,7 +648,7 @@ JSObject types will dispose of their IJSInProcessObjectReference object when the
 
 Callback types must be disposed unless created with the Callback.CreateOne method, in which case they will dispose themselves after the first callback. Disposing a Callback prevents it from being called.
 
-IJSInProcessObjectReference does not dispose of interop resources with a finalizer and MUST be disposed when no longer needed. Failing to dispose these will cause memory leaks.
+If using them directly, IJSInProcessObjectReference objects MUST be disposed when no longer needed. Failing to dispose them will cause memory leaks.
 
 IDisposable objects returned from a WebWorker or SharedWorker service are automatically disposed after the data has been sent to the calling thread.
 
