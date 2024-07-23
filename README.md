@@ -48,7 +48,7 @@ The WebWorkerService singleton contains many methods for working with multiple i
 #### Serialization and WebWorkers
 - Communication with WebWorkers is done using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage). Because postMessage is a Javascript method, the data passed to it will be serialized and deserialized using the JSRuntime serializer. While SpawnDev.BlazorJS does add support for additional data types, not all .Net types are supported. So calling methods with an unsupported parameter or return type will throw an exception.
 
-#### Why does the developer console show Blazor startup message more than once?
+#### Why does the developer console show more than one Blazor startup message?
 - Those messages are from WebWorkers starting up. Workers share the window's console. Startup messages and other console messages from them is normal.
 
 #### When I change a static variable in a Window it does it not change in a worker. Why is that?
