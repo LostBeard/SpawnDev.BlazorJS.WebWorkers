@@ -55,7 +55,7 @@ The WebWorkerService singleton contains many methods for working with multiple i
 - SpawnDev.BlazorJS.WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app. Static variables are not shared.
 
 #### When threading is officially added to Blazor WASM, will SpawnDev.BlazorJS.WebWorkers still be supported?
-- SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. As of writing, the in-progress Blazor WASM multi-threading cannot use Javascript interop in any threads except the main thread, which is a limitation that SpawnDev.BlazorJS.WebWorkers does not have. We expect official multi-threading to make WebWorkers more useful and we will continue to support and improve WebWorkers.
+- SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. As of writing, the in-progress Blazor WASM multi-threading cannot use Javascript interop in any threads except the main thread, which is a limitation that SpawnDev.BlazorJS.WebWorkers does not have. We expect official multi-threading to make WebWorkers more useful and we will continue to support and improve WebWorkers long after official multi-threading is added.
 
 #### Missing Javascript dependencies in WebWorkers
 - See [Javascript dependencies in WebWorkers](#javascript-dependencies-in-webworkers)
