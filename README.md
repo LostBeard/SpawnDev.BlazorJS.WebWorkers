@@ -82,7 +82,7 @@ builder.Services.AddWebWorkerService(webWorkerService =>
 });
 // Add services
 builder.Services.AddSingleton<IFaceAPIService, FaceAPIService>();
-builder.Services.AddSingleton<IMathsService, MathsService>();
+builder.Services.AddSingleton<IMathService, MathService>();
 builder.Services.AddScoped((sp) => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 // ...
 
@@ -386,7 +386,7 @@ var webWorker = await workerService.GetWebWorker();
 
 // Call GetService<ServiceInterface> on a web worker to get a proxy for the service on the web worker.
 // GetService can only be called with Interface types
-var workerMathService = webWorker.GetService<IMathsService>();
+var workerMathService = webWorker.GetService<IMathService>();
 
 // Call async methods on your worker service 
 var result = await workerMathService.CalculatePi(piDecimalPlaces);
@@ -407,7 +407,7 @@ Calling GetSharedWebWorker in another window with the same sharedWorkerName will
 var sharedWebWorker = await workerService.GetSharedWebWorker("workername");
 
 // Just like WebWorker but shared
-var workerMathService = sharedWebWorker.GetService<IMathsService>();
+var workerMathService = sharedWebWorker.GetService<IMathService>();
 
 // Call async methods on your shared worker service
 var result = await workerMathService.CalculatePi(piDecimalPlaces);
