@@ -1,18 +1,78 @@
 ﻿@page "/counter"
+@implements IDisposable
 
 <PageTitle>Counter</PageTitle>
 
-<h1>Counter</h1>
+<h1>Window Shared Counter</h1>
+<p>
+    Open this page in another window. You will see that the new window will have the same counter value as this window. 
+    Clicking the button on either window will increment the counter on all windows. This demonstrates calling a static method in another window inside a component.
+</p>
 
 <p role="status">Current count: @currentCount</p>
 
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
-    private int currentCount = 0;
+    [Inject]
+    WebWorkerService WebWorkerService { get; set; } = default!;
 
-    private void IncrementCount()
+    private int currentCount = 0;
+    // holds the running instance of this component, if one
+    static Counter? instance = null;
+
+    // this static method can be called by other running instances
+    static void SetInstanceCount(int count)
     {
+        if (instance == null) return;
+        instance.currentCount = count;
+        instance.StateHasChanged();
+        Console.WriteLine("Count set by another window");
+    }
+    // this static method can be called by other running instances
+    static int? GetInstanceCount()
+    {
+        return instance?.currentCount;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        // set the current count to the largest value in any other running window
+        var windows = WebWorkerService.Windows.Where(o => o.Info.InstanceId != WebWorkerService.InstanceId).ToList();
+        Console.WriteLine($"init Windows found: {windows.Count}");
+        var values = new List<int>();
+        var tasks = windows.Select(async o =>
+        {
+            try
+            {
+                var instanceCurrentCount = await o.Run(() => GetInstanceCount()).WaitAsync(TimeSpan.FromSeconds(2));
+                if (instanceCurrentCount != null) values.Add(instanceCurrentCount.Value);
+            }
+            catch { }
+        }).ToList();
+        await Task.WhenAll(tasks);
+        Console.WriteLine($"Values found: {values.Count}");
+        currentCount = values.Any() ? values.Max() : 0;
+        Console.WriteLine($"Max value found: {currentCount}");
+        instance = this;
+        StateHasChanged();
+    }
+    public void Dispose()
+    {
+        // unset this instance on the static var
+        instance = null;
+    }
+    private async Task IncrementCount()
+    {
+        // increment for this window
         currentCount++;
+        // set the value on all other windows
+        var windows = WebWorkerService.Windows.Where(o => o.Info.InstanceId != WebWorkerService.InstanceId).ToList();
+        Console.WriteLine($"increment Windows found: {windows.Count}");
+        var tasks = windows.Select(o => o.Run(() => SetInstanceCount(currentCount)));
+        try
+        {
+            await Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch { }
     }
 }
