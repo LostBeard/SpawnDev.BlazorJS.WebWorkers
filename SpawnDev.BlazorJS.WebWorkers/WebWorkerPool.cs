@@ -1,5 +1,4 @@
-﻿using SpawnDev.BlazorJS.Reflection;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {

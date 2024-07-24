@@ -1,12 +1,18 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SpawnDev.BlazorJS.JSObjects;
 using SpawnDev.BlazorJS.JSObjects.WebRTC;
-using SpawnDev.BlazorJS.Reflection;
 using System.Reflection;
 using Array = SpawnDev.BlazorJS.JSObjects.Array;
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
+    /// <summary>
+    /// Allows calling into and receiving calls from another instance of this app (same origin) in any scope<br/>
+    /// - Window<br/>
+    /// - DedicatedWorkerGlobalScope<br/>
+    /// - SharedWorkerGlobalScope<br/>
+    /// - ServiceWorkerGlobalScope
+    /// </summary>
     public class ServiceCallDispatcher : AsyncCallDispatcher, IDisposable
     {
         class CallSideParameter
@@ -28,26 +34,47 @@ namespace SpawnDev.BlazorJS.WebWorkers
             public string RequestId { get; set; } = "";
             public Type[] ParameterTypes { get; set; }
         }
-        public static List<Type> _transferableTypes { get; } = new List<Type> {
+        static List<Type> _transferableTypes { get; } = new List<Type> {
             typeof(ArrayBuffer),
-            typeof(MessagePort),
-            typeof(ReadableStream),
-            typeof(WritableStream),
-            typeof(TransformStream),
             typeof(AudioData),
             typeof(ImageBitmap),
-            typeof(VideoFrame),
+            typeof(MessagePort),
             typeof(OffscreenCanvas),
+            typeof(ReadableStream),
             typeof(RTCDataChannel),
+            typeof(TransformStream),
+            typeof(VideoFrame),
+            typeof(WritableStream),
         };
+        /// <summary>
+        /// Returns true if the type is Transferable
+        /// </summary>
         public static bool IsTransferable(Type type) => _transferableTypes.Contains(type);
-        public static bool IsTransferable<T>() => _transferableTypes.Contains(typeof(T));
-        public static bool IsTransferable<T>(T obj) => _transferableTypes.Contains(typeof(T));
+        /// <summary>
+        /// Returns true if the type is Transferable
+        /// </summary>
+        public static bool IsTransferable<T>() => IsTransferable(typeof(T));
+        /// <summary>
+        /// Returns true if the object type is Transferable
+        /// </summary>
+        public static bool IsTransferable<T>(T obj) => IsTransferable(typeof(T));
         protected IMessagePort? _port { get; set; }
         protected IMessagePortSimple? _portSimple { get; set; }
+        /// <summary>
+        /// Returns true if the target of this dispatcher is this instance
+        /// </summary>
         public bool LocalInvoker { get; private set; }
+        /// <summary>
+        /// Information about the remote instance
+        /// </summary>
         public ServiceCallDispatcherInfo? RemoteInfo { get; private set; } = null;
+        /// <summary>
+        /// Information about this instance
+        /// </summary>
         public ServiceCallDispatcherInfo LocalInfo { get; }
+        /// <summary>
+        /// Returns true if there is at least 1 request waiting for a result
+        /// </summary>
         public bool WaitingForResponse => _waiting.Count > 0;
         Dictionary<string, TaskCompletionSource<Array>> _waiting = new Dictionary<string, TaskCompletionSource<Array>>();
         protected IServiceProvider ServiceProvider;
@@ -278,8 +305,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 if (!string.IsNullOrEmpty(requestId))
                 {
                     // Send notification of completion because there is a requestId
-                    //var callbackMsg = new WebWorkerMessageOut { TargetType = "callback", RequestId = requestId };
-                    var callbackMsg = new List<object?> { "callback", requestId, };
                     object[] transfer = System.Array.Empty<object>();
                     if (retValue != null)
                     {
@@ -297,8 +322,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             transfer = conversionInfo.GetTransferablePropertyValues(retValue);
                         }
                     }
-                    callbackMsg.Add(err);
-                    callbackMsg.Add(retValue);
+                    var callbackMsg = new object?[] { "callback", requestId, err, retValue };
                     if (_port != null) _port?.PostMessage(callbackMsg, transfer);
                     else _portSimple?.PostMessage(callbackMsg);
                 }
@@ -309,7 +333,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 Console.WriteLine($"Failed to notify remote endpoint of result: {ex.Message}");
             }
         }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="eventName"></param>
+        /// <param name="data"></param>
         public void SendEvent(string eventName, object?[]? data = null)
         {
             var outMsg = new List<object?> { "event", eventName };
@@ -516,7 +544,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     }
                     else
                     {
-                        throw new Exception("Unknown delegate parameter type");
+                        throw new Exception("Unsupported delegate parameter type. Only Action delegates can be sent as parameters.");
                     }
                 }
                 else if (arg is CancellationToken token)
@@ -529,7 +557,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     else if (token.CanBeCanceled)
                     {
                         // a token id will be sent which can be referenced later to cancel the token
-                        // lsiten for the token cancellation event and send the cancel request at that time
+                        // listen for the token cancellation event and send the cancel request at that time
                         var tokenId = Guid.NewGuid().ToString();
                         token.Register(() =>
                         {
@@ -690,7 +718,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
 
         /// <summary>
-        /// When a call is dispatched on a service with a Lifetime set to Scoped, when is the actual scope of Scoped
+        /// When a call is dispatched on a service with a Lifetime set to Scoped, what is the actual scope of Scoped:
         /// - Singleton - Shared by all callers onto this instance. This is how it works when using Scoped services in Blazor WASM apps by default.
         /// - Scoped - The scope is the Lifetime of this ServiceCallDispatcher. Per connection. Each connection will access its own copy of the service in this worker.
         /// - Transient - The scope is per call. A new instance of the service is used for each call.
@@ -784,8 +812,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public static Action<T0, T1, T2, T3, T4> CreateTypedActionT5<T0, T1, T2, T3, T4>(Action<object?[]> arg) => new Action<T0, T1, T2, T3, T4>((t0, t1, t2, t3, t4) => arg(new object[] { t0, t1, t2, t3, t4 }));
         public object CreateTypedAction(Type[] typ1, Action<object?[]> arg)
         {
-            var meth = typeof(ServiceCallDispatcher).GetMethod($"CreateTypedActionT{typ1.Length}", BindingFlags.Public | BindingFlags.Static);
-            var gmeth = meth.MakeGenericMethod(typ1);
+            var method = typeof(ServiceCallDispatcher).GetMethod($"CreateTypedActionT{typ1.Length}", BindingFlags.Public | BindingFlags.Static);
+            var gmeth = method.MakeGenericMethod(typ1);
             var genericAction = gmeth.Invoke(null, new object[] { arg });
             return genericAction;
         }

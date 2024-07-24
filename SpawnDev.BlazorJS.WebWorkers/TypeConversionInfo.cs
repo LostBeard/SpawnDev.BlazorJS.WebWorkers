@@ -48,7 +48,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         static JsonNamingPolicy JsonNamingPolicy = JsonNamingPolicy.CamelCase;
         static string GetPropertyJSName(PropertyInfo prop)
         {
-            // TODO - json name attribute
             var jsonPropNameAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>(true);
             if (jsonPropNameAttr != null) return jsonPropNameAttr.Name;
             string propName = prop.Name;
@@ -162,11 +161,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     useTaskReader = true;
                     return;
                 }
-                //else if (HasIJSInProcessObjectReferenceConstructor()) {
-                //    IsTransferable = false; // no way to tell from this conversion. this is a generic wrapper for IJSInProcessObjectReference
-                //    useIJSWrapperReader = true;
-                //    return;
-                //}
                 else
                 {
                     // class
@@ -188,25 +182,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             useDefaultReader = true;
         }
-        //public object? PreExport(object? obj) {
-        //    object? ret = obj;
-        //    if (obj == null || ReturnType == null) return ret;
-        //    if (useDefaultReader) return ret;
-        //    if (ReturnType.IsTask()) {
-        //        var taskReturnType = ReturnType.AsyncReturnType();
-        //        if (taskReturnType == typeof(void)) {
-        //            ret = new Promise((Task)ret);
-        //        }
-        //        else {
-        //            ret = Promise.CreateTypedInstance(taskReturnType, ret);
-        //        }
-        //    }
-        //    else if (isIJSObject) {
-        //        var tmp = obj as IJSObject;
-        //        ret = tmp.JSRef;
-        //    }
-        //    return ret;
-        //}
         public object[] GetTransferablePropertyValues(object? obj)
         {
             var ret = new List<object>();
@@ -230,7 +205,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         var transferAttr = (WorkerTransferAttribute?)prop.GetCustomAttribute(typeof(WorkerTransferAttribute), false);
                         if (transferAttr != null && !transferAttr.Transfer)
                         {
-                            // this property has been marked as non-stransferable
+                            // this property has been marked as non-transferable
                             continue;
                         }
                         object? propVal = null;
@@ -259,7 +234,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         var transferAttr = (WorkerTransferAttribute?)prop.GetCustomAttribute(typeof(WorkerTransferAttribute), false);
                         if (transferAttr != null && !transferAttr.Transfer)
                         {
-                            // this property has been marked as non-stransferable
+                            // this property has been marked as non-transferable
                             continue;
                         }
                         object? propVal = null;
@@ -320,128 +295,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             return ret.ToArray();
         }
-        //public object? FinishImport(IJSInProcessObjectReference? _ref) {
-        //    throw new Exception("Obsolete. No longer used");
-        //    object? ret = null;
-        //    if (_ref == null || ReturnType == null) return null;
-        //    if (usePropertyReader) {
-        //        // TODO - implement this using a JsonConverter to fix web workers
-        //        var tmpRet = Activator.CreateInstance(ReturnType);
-        //        foreach (var kvp in returnTypeProperties) {
-        //            var propName = kvp.Key;
-        //            var prop = kvp.Value;
-        //            object? value;
-        //            try {
-        //                value = _ref.Get(prop.PropertyType, propName);
-        //            }
-        //            catch {
-        //                // Could not read property. Skipping
-        //                continue;
-        //            }
-        //            if (value == null) continue;
-        //            prop.SetValue(tmpRet, value);
-        //        }
-        //        ret = tmpRet;
-        //        _ref.Dispose();
-        //        _ref = null;
-        //    }
-        //    else if (useIterationReader) {
-        //        if (ElementType != null) {
-        //            var length = _ref.Get<int>("length");
-        //            var tmpRet = Array.CreateInstance(ElementType, length);
-        //            for (var i = 0; i < length; i++) {
-        //                object? value;
-        //                try {
-        //                    value = _ref.Get(ElementType, i);
-        //                }
-        //                catch {
-        //                    // Could not read property. Skipping
-        //                    continue;
-        //                }
-        //                if (value == null) continue;
-        //                tmpRet.SetValue(value, i);
-        //            }
-        //            ret = (object)tmpRet;
-        //            _ref.Dispose();
-        //            _ref = null;
-        //        }
-        //    }
-        //    else if (useDictionaryReader) {
-        //        // TODO - implement this using a JsonConverter
-        //        if (DictionaryKeyType != null && DictionaryValueType != null) {
-        //            var tmpRet = Activator.CreateInstance(ReturnType) as System.Collections.IDictionary;
-        //            if (tmpRet != null) {
-        //                using var keysArray = BlazorJSRuntime.JS.Call<IJSInProcessObjectReference>("Object.keys", _ref);
-        //                if (keysArray != null) {
-        //                    var length = keysArray.Get<int>("length");
-        //                    if (length > 0) {
-        //                        using var valuesArray = BlazorJSRuntime.JS.Call<IJSInProcessObjectReference>("Object.values", _ref);
-        //                        if (valuesArray != null) {
-        //                            for (var i = 0; i < length; i++) {
-        //                                object? key = null;
-        //                                object? value = null;
-        //                                try {
-        //                                    key = keysArray.Get(DictionaryKeyType, i);
-        //                                }
-        //                                catch {
-        //                                    // Could not read property. Skipping
-        //                                    continue;
-        //                                }
-        //                                try {
-        //                                    value = valuesArray.Get(DictionaryValueType, i);
-        //                                }
-        //                                catch { }
-        //                                tmpRet.Add(key, value);
-        //                            }
-        //                            ret = tmpRet;
-        //                            _ref.Dispose();
-        //                            _ref = null;
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    else if (useTaskReader) {
-        //        //var taskReturnType = ReturnType.AsyncReturnType();
-        //        //if (taskReturnType == typeof(void)) {
-        //        //    using var promise = new Promise(_ref);
-        //        //    ret = promise.ThenAsync();
-        //        //    _ref = null;    // ret now owns ret, prevent _ref's disposal.
-        //        //}
-        //        //else {
-        //        //    using var promise = (Promise<>)Activator.CreateInstance(typeof(Promise<>).MakeGenericType(taskReturnType), _ref);
-        //        //    ret = promise.ThenAsync(taskReturnType);
-        //        //    _ref = null;    // ret now owns ret, prevent _ref's disposal.
-        //        //}
-        //    }
-        //    else if (useJSObjectReader) {
-        //        ret = Activator.CreateInstance(ReturnType, _ref);
-        //        _ref = null;    // ret now owns ret, prevent _ref's disposal.
-        //    }
-        //    else if (useIJSWrapperReader) {
-        //        ret = Activator.CreateInstance(ReturnType, _ref);
-        //        _ref = null;    // ret now owns ret, prevent _ref's disposal.
-        //    }
-        //    else if (useInterfaceProxy) {
-        //        ret = IJSObjectProxy.GetInterface(ReturnType, _ref);
-        //        _ref = null;    // ret now owns ret, prevent _ref's disposal.
-        //        var nmt = true;
-        //    }
-        //    // _ref must be contained in a JSObject that now owns the _ref and will dispose it later
-        //    // OR
-        //    // _ref must disposed before getting here
-        //    // failure to dispose _ref (just like any IJSInProcessObjectReference) will cause a memory leak
-        //    _ref?.Dispose();
-        //    return ret;
-        //}
-
-        public static TypeConversionInfo? GetObjectTypeConversionInfo(object? obj)
-        {
-            if (obj == null) return null;
-            return GetTypeConversionInfo(obj.GetType());
-        }
-
         static Dictionary<Type, TypeConversionInfo> _conversionInfo = new Dictionary<Type, TypeConversionInfo>();
         public static TypeConversionInfo GetTypeConversionInfo(Type type)
         {
@@ -460,7 +313,5 @@ namespace SpawnDev.BlazorJS.WebWorkers
             _conversionInfo[type] = conversionInfo;
             return conversionInfo;
         }
-        static TypeConversionInfo GetTypeConversionInfo<T>() => GetTypeConversionInfo(typeof(T));
-
     }
 }

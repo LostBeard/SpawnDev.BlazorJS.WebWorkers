@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnDev.BlazorJS.WebWorker
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnDev.BlazorJS.WebWorkers.Build", "SpawnDev.BlazorJS.WebWorkers.Build\SpawnDev.BlazorJS.WebWorkers.Build.csproj", "{A855E2C2-27D1-4494-A9CA-58EBF11DC34D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpawnDev.BlazorJS.WebWorkers.Demo", "SpawnDev.BlazorJS.WebWorkers.Demo\SpawnDev.BlazorJS.WebWorkers.Demo.csproj", "{BBDA1D8E-A5FF-4B17-96A0-B56D1840CBAE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnDev.BlazorJS.WebWorkers.Demo", "SpawnDev.BlazorJS.WebWorkers.Demo\SpawnDev.BlazorJS.WebWorkers.Demo.csproj", "{BBDA1D8E-A5FF-4B17-96A0-B56D1840CBAE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
