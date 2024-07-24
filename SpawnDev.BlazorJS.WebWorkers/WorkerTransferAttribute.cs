@@ -7,7 +7,7 @@
     public class WorkerTransferAttribute : Attribute
     {
         /// <summary>
-        /// If true, the value will be added to the transferables list
+        /// If true, the value will be added to the transferable list
         /// </summary>
         public bool Transfer { get; private set; } = true;
         /// <summary>

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using SpawnDev.BlazorJS.JSObjects;
+﻿using SpawnDev.BlazorJS.JSObjects;
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
