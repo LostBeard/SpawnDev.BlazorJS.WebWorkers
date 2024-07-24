@@ -1,5 +1,8 @@
 ﻿namespace SpawnDev.BlazorJS.WebWorkers
 {
+    /// <summary>
+    /// ServiceWorkerStartupRegistration enum
+    /// </summary>
     public enum ServiceWorkerStartupRegistration
     {
         /// <summary>

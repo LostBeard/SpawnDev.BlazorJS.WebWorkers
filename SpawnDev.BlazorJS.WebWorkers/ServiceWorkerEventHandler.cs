@@ -3,6 +3,10 @@ using SpawnDev.BlazorJS.Toolbox;
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
+    /// <summary>
+    /// ServiceWorkerEventHandler base class<br/>
+    /// Inherit this class and override the virtual event handler methods as needed
+    /// </summary>
     public class ServiceWorkerEventHandler : IAsyncBackgroundService, IDisposable
     {
         /// <summary>
@@ -10,16 +14,22 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         public Task Ready => _Ready ??= InitAsync();
         private Task? _Ready = null;
-
+        /// <summary>
+        /// BlazorJSRuntime
+        /// </summary>
         protected BlazorJSRuntime JS;
+        /// <summary>
+        /// If running in a ServiceWorkerGlobalScope this will be globalThis
+        /// </summary>
         protected ServiceWorkerGlobalScope? ServiceWorkerThis = null;
-    
+        /// <summary>
+        /// ServiceWorkerEventHandler default constructor
+        /// </summary>
         public ServiceWorkerEventHandler(BlazorJSRuntime js)
         {
             JS = js;
             ServiceWorkerThis = JS.ServiceWorkerThis;
         }
-
         async Task InitAsync()
         {
             await OnInitializedAsync();
@@ -44,8 +54,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         void GetMissedServiceWorkerEvents()
         {
-            var missedEvents = JS.Call<JSObjects.Array>("GetMissedServiceWorkerEvents");
-            missedEvents.ForEach<Event>(e =>
+            var missedEvents = JS.Call<Event[]>("GetMissedServiceWorkerEvents");
+            foreach (var e in missedEvents)
             {
                 var type = e.Type;
                 switch (type)
@@ -78,38 +88,47 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         ServiceWorker_OnSync(e.JSRefMove<MissedSyncEvent>());
                         break;
                 }
-            });
+            }
         }
-
         void ServiceWorker_OnNotificationClose(NotificationEvent e)
         {
             if (e is MissedNotificationEvent missedEvent)
             {
                 Async.Run(async () =>
                 {
-                    await ServiceWorker_OnNotificationCloseAsync(e);
-                    missedEvent.WaitResolve();
+                    try
+                    {
+                        await ServiceWorker_OnNotificationCloseAsync(e);
+                        missedEvent.WaitResolve();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex.ToString());
+                        missedEvent.WaitReject();
+                    }
                 });
-                ((Action)(async () =>
-                {
-                    await ServiceWorker_OnNotificationCloseAsync(e);
-                    missedEvent.WaitResolve();
-                }))();
             }
             else
             {
                 e.WaitUntil(ServiceWorker_OnNotificationCloseAsync(e));
             }
         }
-
         void ServiceWorker_OnNotificationClick(NotificationEvent e)
         {
             if (e is MissedNotificationEvent missedEvent)
             {
                 Async.Run(async () =>
                 {
-                    await ServiceWorker_OnNotificationClickAsync(e);
-                    missedEvent.WaitResolve();
+                    try
+                    {
+                        await ServiceWorker_OnNotificationClickAsync(e);
+                        missedEvent.WaitResolve();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex.ToString());
+                        missedEvent.WaitReject();
+                    }
                 });
             }
             else
@@ -117,25 +136,48 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnNotificationClickAsync(e));
             }
         }
-
+        /// <summary>
+        /// Occurs on app startup
+        /// </summary>
+        /// <returns></returns>
         protected virtual Task OnInitializedAsync() => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when a ServiceWorkerRegistration acquires a new ServiceWorkerRegistration.installing worker.
+        /// </summary>
         protected virtual Task ServiceWorker_OnInstallAsync(ExtendableEvent e) => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when a ServiceWorkerRegistration acquires a new ServiceWorkerRegistration.active worker.
+        /// </summary>
         protected virtual Task ServiceWorker_OnActivateAsync(ExtendableEvent e) => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when incoming messages are received. Controlled pages can use the MessagePort.postMessage() method to send messages to service workers.
+        /// </summary>
         protected virtual Task ServiceWorker_OnMessageAsync(ExtendableMessageEvent e) => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when a server push notification is received.
+        /// </summary>
         protected virtual Task ServiceWorker_OnPushAsync(PushEvent e) => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when a push subscription has been invalidated, or is about to be invalidated (e.g. when a push service sets an expiration time).
+        /// </summary>
         protected virtual void ServiceWorker_OnPushSubscriptionChange(Event e) { }
-
+        /// <summary>
+        /// Triggered when a call to SyncManager.register is made from a service worker client page. The attempt to sync is made either immediately if the network is available or as soon as the network becomes available.
+        /// </summary>
         protected virtual Task ServiceWorker_OnSyncAsync(SyncEvent e) => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when a user closes a displayed notification.
+        /// </summary>
         protected virtual Task ServiceWorker_OnNotificationCloseAsync(NotificationEvent e) => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when a user clicks on a displayed notification.
+        /// </summary>
         protected virtual Task ServiceWorker_OnNotificationClickAsync(NotificationEvent e) => Task.CompletedTask;
-
+        /// <summary>
+        /// Occurs when a fetch() is called.
+        /// </summary>
+        /// <param name="e"></param>
+        /// <returns></returns>
         protected virtual async Task<Response> ServiceWorker_OnFetchAsync(FetchEvent e)
         {
             Response ret;
@@ -149,7 +191,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             return ret;
         }
-
         void ServiceWorker_OnInstall(ExtendableEvent e)
         {
             if (e is MissedExtendableEvent missedEvent)
@@ -161,7 +202,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         await ServiceWorker_OnInstallAsync(e);
                         missedEvent.WaitResolve();
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         Console.Error.WriteLine(ex.ToString());
                         missedEvent.WaitReject();
@@ -173,7 +214,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnInstallAsync(e));
             }
         }
-
         void ServiceWorker_OnActivate(ExtendableEvent e)
         {
             if (e is MissedExtendableEvent missedEvent)
@@ -197,7 +237,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnActivateAsync(e));
             }
         }
-
         void ServiceWorker_OnFetch(FetchEvent e)
         {
             if (e is MissedFetchEvent missedEvent)
@@ -221,7 +260,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.RespondWith(ServiceWorker_OnFetchAsync(e));
             }
         }
-
         void ServiceWorker_OnMessage(ExtendableMessageEvent e)
         {
             if (e is MissedExtendableMessageEvent missedEvent)
@@ -245,7 +283,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnMessageAsync(e));
             }
         }
-
         void ServiceWorker_OnPush(PushEvent e)
         {
             if (e is MissedPushEvent missedEvent)
@@ -269,7 +306,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnPushAsync(e));
             }
         }
-
         void ServiceWorker_OnSync(SyncEvent e)
         {
             if (e is MissedSyncEvent missedEvent)
@@ -293,11 +329,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnSyncAsync(e));
             }
         }
+        /// <summary>
+        /// Release resources
+        /// </summary>
         public virtual void Dispose()
         {
             if (ServiceWorkerThis != null)
             {
-                
+
             }
         }
     }
