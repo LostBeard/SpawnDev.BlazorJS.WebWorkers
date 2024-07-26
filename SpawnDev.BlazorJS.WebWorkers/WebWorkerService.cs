@@ -351,7 +351,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
         }
         /// <summary>
-        /// If true, incoming instance connections ill be allowed
+        /// If true, incoming instance connections will be allowed
         /// </summary>
         public bool EnableIncomingInstanceConnections { get; set; } = true;
         const string AllInstancedId = "*";
@@ -365,10 +365,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (SharedBroadcastChannel != null)
             {
                 SharedBroadcastChannel.PostMessage(allArgs);
-            }
-            else
-            {
-                // TODO
             }
         }
         internal void BroadcastCall(string cmd, params object?[]? args) => BroadcastCall(AllInstancedId, cmd, args);

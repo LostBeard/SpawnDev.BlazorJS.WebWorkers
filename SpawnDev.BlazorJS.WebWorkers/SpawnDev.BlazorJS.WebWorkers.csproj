@@ -4,7 +4,7 @@
 		<TargetFrameworks>net8.0;net7.0;net6.0</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Version>2.4.7</Version>
+		<Version>2.5.0</Version>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<EmbedAllSources>true</EmbedAllSources>
@@ -77,9 +77,9 @@
 	<ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.1" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
-		<PackageReference Include="SpawnDev.BlazorJS" Version="2.4.7" />
+		<PackageReference Include="SpawnDev.BlazorJS" Version="2.5.0" />
 	</ItemGroup>
 
 	<ItemGroup>

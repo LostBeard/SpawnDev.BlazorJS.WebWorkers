@@ -236,7 +236,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         break;
                     case "call":
                         {
-                            await HandleCallMessage(args);
+                            await HandleCallMessage(args, false);
+                        }
+                        break;
+                    case "msg":
+                        {
+                            await HandleCallMessage(args, true);
                         }
                         break;
                 }
@@ -249,7 +254,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
         }
 
-        async Task HandleCallMessage(Array args)
+        async Task HandleCallMessage(Array args, bool noReply)
         {
             string requestId = "";
             object? retValue = null;
@@ -302,8 +307,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             try
             {
-                if (!string.IsNullOrEmpty(requestId))
+                if (!string.IsNullOrEmpty(requestId) && !noReply)
                 {
+
                     // Send notification of completion because there is a requestId
                     object[] transfer = System.Array.Empty<object>();
                     if (retValue != null)
@@ -387,14 +393,22 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 throw new Exception("ServiceCallDispatcher.Call: method does not have a reflected type.");
             }
+
+            var originCallableAttribute = methodInfo!.GetCustomAttribute<OriginCallableAttribute>(true);
+            var markedNoReply = originCallableAttribute?.NoReply ?? false;
             var requestId = Guid.NewGuid().ToString();
             var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
             var msgData = PreSerializeArgs(requestId, methodInfo, args, out var transferable);
-            var msgOut = new List<object?> { "call", requestId, targetMethod };
+            var msgOut = new List<object?> { markedNoReply ? "msg" : "call", requestId, targetMethod };
             msgOut.AddRange(msgData);
-            var workerTask = new TaskCompletionSource<Array>();
             if (_port != null) _port.PostMessage(msgOut, transferable);
             else _portSimple?.PostMessage(msgOut);
+            if (markedNoReply)
+            {
+                CheckBusyStateChanged();
+                return null;
+            }
+            var workerTask = new TaskCompletionSource<Array>();
             _waiting.Add(requestId, workerTask);
             CheckBusyStateChanged();
             try
