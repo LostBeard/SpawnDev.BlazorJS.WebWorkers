@@ -263,7 +263,7 @@ class Document extends Node {
         this._readyState = '';
     }
     _nodeAppended(node) {
-        // if the dom hasn't been init yet do nothing here. the node will be init whe nthe doucment is
+        // if the dom hasn't been init yet do nothing here. the node will be init during doucment init
         if (this._beenInit) {
             if (node instanceof HTMLScriptElement) {
                 this.initScriptElement(node);

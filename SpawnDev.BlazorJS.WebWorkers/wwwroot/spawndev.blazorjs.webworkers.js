@@ -149,7 +149,8 @@ if (disableHotReload) {
 
 // dynamic import support tested using an empty script
 async function hasDynamicImport() {
-    // import() is disallowed on ServiceWorkerGlobalScope by the HTML specification.See https://github.com/w3c/ServiceWorker/issues/1356.
+    // import() is disallowed on ServiceWorkerGlobalScope by the HTML specification.
+    // See https://github.com/w3c/ServiceWorker/issues/1356.
     if (globalThisTypeName == 'ServiceWorkerGlobalScope') {
         return false;
     }

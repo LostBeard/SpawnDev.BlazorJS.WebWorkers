@@ -176,8 +176,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Occurs when a fetch() is called.
         /// </summary>
-        /// <param name="e"></param>
-        /// <returns></returns>
         protected virtual async Task<Response> ServiceWorker_OnFetchAsync(FetchEvent e)
         {
             Response ret;
