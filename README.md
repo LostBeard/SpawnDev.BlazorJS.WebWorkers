@@ -4,6 +4,7 @@
 
 - Easily call Blazor Services and static methods in separate threads with WebWorkers and SharedWebWorkers 
 - Call services and static methods in other Windows
+- Component's can call their own private static methods in background threads (supports Service injection)
 - Works in Blazor WASM .Net 6, 7, and 8.
 - SharedArrayBuffer is not required. No special HTTP headers to configure.
 - Supports and uses transferable objects whenever possible
