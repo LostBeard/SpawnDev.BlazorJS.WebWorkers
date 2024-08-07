@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -15,8 +15,13 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
         public string PatchDir { get; private set; }
         public string PatchJSPath { get; private set; }
         public bool UseMinifiedPatch { get; set; } = false;
-        public BlazorWASMFrameworkTool(string wwwrootPath, string contentPath)
+        public string AssetManifestFileName = "";
+        public string AssetManifestFilePath = "";
+        bool PatchManifest = false;
+
+        public BlazorWASMFrameworkTool(string wwwrootPath, string contentPath, string assetManifestFile)
         {
+            AssetManifestFileName = assetManifestFile;
             PatchDir = Path.GetFullPath(contentPath);
             if (!Directory.Exists(PatchDir))
             {
@@ -45,6 +50,15 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
             {
                 throw new Exception("patch.js not found");
             }
+            if (!string.IsNullOrEmpty(AssetManifestFileName))
+            {
+                var assetManifestFilePath = Path.Combine(WwwrootDir, AssetManifestFileName);
+                if (File.Exists(assetManifestFilePath))
+                {
+                    AssetManifestFilePath = Path.GetFullPath(assetManifestFilePath);
+                }
+            }
+            PatchManifest = !string.IsNullOrEmpty(AssetManifestFilePath) && File.Exists(AssetManifestFilePath);
         }
         // https://www.digitalocean.com/community/tools/minify
         // if there is a minified version of the script that is newer than the non-minified use it
@@ -58,15 +72,18 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
             if (!normalJSInfo.Exists) return minifiedJSPath;
             return minifiedJSFInfo.LastWriteTimeUtc > normalJSInfo.LastWriteTimeUtc ? minifiedJSPath : normalJSPath;
         }
+        static string patchedTag = "// FRAMEWORK-PATCHED";
         string ReadPatchFile(string name)
         {
             return File.ReadAllText(GetPatchFilePath(name));
         }
         // publish builds put all the Blazor js files in $(TargetDir)wwwroot\_framework
         // non-publish builds put the Blazor js files in $(TargetDir)wwwroot\_framework AND $(TargetDir)
+        /// <summary>
+        /// This method patches the Blazor WebAssembly Javascript files so that Blazor can start in environments that do not support dynamic imports.<br/>
+        /// </summary>
         public void ImportPatch()
         {
-            //System.Diagnostics.Debugger.Launch();
             var frameworkDirJSFiles = Directory.GetFiles(FrameworkDir, "*.js");
             var patchedTag = "// FRAMEWORK-PATCHED";
             foreach (var jsFile in frameworkDirJSFiles)
@@ -74,6 +91,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 //Console.WriteLine(jsFile);
                 var filename = Path.GetFileName(jsFile);
                 var js = File.ReadAllText(jsFile);
+                var orig = js;
                 if (js.Contains(patchedTag))
                 {
                     // already patched. skip.
@@ -85,19 +103,15 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 // getBaseURI:()=>globalThis.blazorConfig.documentBaseURI
                 js = Regex.Replace(js, @"\bgetBaseURI:\(\)=>(globalThis\.)?document\.baseURI\b", @"getBaseURI:()=>globalThis.blazorConfig.documentBaseURI");
                 // ***************************************************************************************
+                // ***************************************************************************************
                 // patch document.basURI which Blazor uses to determine where Blazor assets are located.
                 // in workers this will be determined based on location.href
                 // in browser extensions running in content mode, this will be (globalThis.chrome || globalThis.browser).runtime.getURL('./')
                 js = Regex.Replace(js, @"\bglobalThis\.document\.baseURI\b", @"globalThis.blazorConfig.blazorBaseURI");
                 js = Regex.Replace(js, @"\bdocument\.baseURI\b", @"globalThis.blazorConfig.blazorBaseURI");
-                //
-                //js = Regex.Replace(js, @"(?<!globalThis\.)document\b", @"globalThis.document");
                 // ***************************************************************************************
-                // path fetch -> blazorFetch which will make all relative path fetches use globalThis.blazorConfig.blazorBaseURI as the base path
-                //js = Regex.Replace(js, @"\bfetch\(", @"globalThis.blazorFetch(");
-                //js = Regex.Replace(js, @"\bglobalThis\.fetch\b", @"globalThis.blazorFetch");
                 // ***************************************************************************************
-                // patch import so that it uses importShim from the patched code
+                // Patch import so that it uses importShim from the patched code instead of dynamic imports
                 var filenameJson = JsonSerializer.Serialize(filename);
                 // the filename will be hardcoded into the script when imported via importShim, the filename will used to 
                 // patch import( -> importShim(
@@ -105,7 +119,8 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 // patch import.meta -> importShim.meta('FILENAME')
                 js = Regex.Replace(js, @"\bimport\.meta\b", $@"importShim.meta({filenameJson})");
                 // ***************************************************************************************
-                // module scripts will be wrapped in a function and have exports captured to so they can be returned from importShim
+                // ***************************************************************************************
+                // Module scripts will be wrapped in a function and have `exports` captured so they can be returned from importShim
                 // patch export
                 // ** dotnet 7.0 ((
                 // dotnet.7.0.0.amub20uvka.js
@@ -141,7 +156,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 if (exportPatched)
                 {
                     modified = true;
-                    // appears to be a module, wrap in a called function
+                    // exports were patched. Wrap in a called function.
                     js = "(()=>{" + newLine + js + newLine + "})();" + newLine;
                 }
                 // if the blazor entry point, add patch support code
@@ -155,23 +170,81 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                     var postPatch = ReadPatchFile("patch-post");
                     js = $"{prePatch} {newLine} {js} {newLine} {postPatch}";
                 }
-                if (modified)
+                var changed = orig != js;
+                if (changed)
                 {
-                    //if (filename != "blazor.webassembly.js")
-                    //{
-                    //    //js = "debugger;" + js;
-                    //}
-                    //if (filename == "dotnet.js")
-                    //{
-                    //    js = "console.log('*****************************');";
-                    //}
+                    Console.WriteLine($"Patched: {filename}");
                     // add patched marker
                     js = patchedTag + newLine + js;
                     // save patched version
                     File.WriteAllText(jsFile, js);
-                    //Console.WriteLine($"Patched js file: {filename}");
                 }
             }
+        }
+        public void VerifyAssetsManifest()
+        {
+            if (string.IsNullOrEmpty(AssetManifestFilePath) || !File.Exists(AssetManifestFilePath))
+            {
+                return;
+            }
+            var manifestUpdated = false;
+            var assetsManifestFile = ReadServiceWorkerAssetsManifest(AssetManifestFilePath);
+            var entryCount = assetsManifestFile?.Assets?.Count ?? 0;
+            if (entryCount == 0)
+            {
+                return;
+            }
+            var version = assetsManifestFile.Version;
+            Console.WriteLine($"Asset manifest loaded: {entryCount} {version}");
+            foreach (var entry in assetsManifestFile.Assets)
+            {
+                var relativePath = entry.Url.Replace('/', Path.DirectorySeparatorChar);
+                var filePath = Path.Combine(WwwrootDir, relativePath);
+                if (!File.Exists(filePath))
+                {
+                    // skip
+                    continue;
+                }
+                var fileHash = $"sha256-{FileHasher.GetFileHashBase64(filePath)}";
+                if (fileHash != entry.Hash)
+                {
+                    entry.Hash = fileHash;
+                    manifestUpdated = true;
+                    Console.WriteLine($"Asset manifest entry updated: {entry.Url} {fileHash}");
+                }
+            }
+            if (manifestUpdated)
+            {
+                WriteAssetManifest(AssetManifestFilePath, assetsManifestFile);
+                Console.WriteLine($"Asset manifest was updated");
+            }
+            else
+            {
+                Console.WriteLine($"Asset manifest was not modified");
+            }
+        }
+        private static AssetManifest ReadServiceWorkerAssetsManifest(string assetsManifestPath)
+        {
+            var jsContents = File.ReadAllText(assetsManifestPath);
+            var jsonStart = jsContents.IndexOf('{');
+            var jsonLength = jsContents.LastIndexOf('}') - jsonStart + 1;
+            var json = jsContents.Substring(jsonStart, jsonLength);
+            return JsonSerializer.Deserialize<AssetManifest>(json, DefaultJsonSerializerOptions);
+        }
+        static JsonSerializerOptions DefaultJsonSerializerOptions { get; set; } = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = false,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+        };
+        static void WriteAssetManifest(string assetsManifestPath, AssetManifest assetManifest)
+        {
+            var json = JsonSerializer.Serialize(assetManifest, DefaultJsonSerializerOptions);
+            var js = $"self.assetsManifest = {json};";
+            File.WriteAllText(assetsManifestPath, js);
         }
         static bool RegexReplaceLast(ref string subject, string pattern, Func<Match, string> ifFound)
         {
@@ -205,5 +278,33 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
     public static class MatchCollectionExtensions
     {
         public static Match Last(this MatchCollection _this) => _this[_this.Count - 1];
+    }
+    /// <summary>
+    /// Manifest asset info
+    /// </summary>
+    public class ManifestAsset
+    {
+        /// <summary>
+        /// File content hash. This should be the base-64-formatted SHA256 value.
+        /// </summary>
+        public string Hash { get; set; }
+        /// <summary>
+        /// Asset URL. Normally this will be relative to the application's base href.
+        /// </summary>
+        public string Url { get; set; }
+    }
+    /// <summary>
+    /// Asset manifest
+    /// </summary>
+    public class AssetManifest
+    {
+        /// <summary>
+        /// Assets
+        /// </summary>
+        public List<ManifestAsset> Assets { get; set; }
+        /// <summary>
+        /// Version
+        /// </summary>
+        public string Version { get; set; }
     }
 }

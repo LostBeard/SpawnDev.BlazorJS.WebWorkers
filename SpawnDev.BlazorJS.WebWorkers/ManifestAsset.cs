@@ -6,11 +6,11 @@
     public class ManifestAsset
     {
         /// <summary>
-        /// Asset hash
+        /// File content hash. This should be the base-64-formatted SHA256 value.
         /// </summary>
         public string Hash { get; set; }
         /// <summary>
-        /// Asset url
+        /// Asset URL. Normally this will be relative to the application's base href.
         /// </summary>
         public string Url { get; set; }
     }

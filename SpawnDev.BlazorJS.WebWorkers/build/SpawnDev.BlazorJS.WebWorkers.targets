@@ -38,6 +38,7 @@
 	<Target Name="WebWorkerBuildAfterTargetsBuild" AfterTargets="Build">
 		<!-- <Message Importance="high" Text="********************** SpawnDev.BlazorJS.WebWorkers AfterTargets Build" /> -->
 		<ImportShimBlazorWASM
+			ServiceWorkerAssetsManifest="$(ServiceWorkerAssetsManifest)"
 			PatchFramework="$(WebWorkerPatchFramework)"
 			StaticWebAsset="@(StaticWebAsset)"
 			ProjectDir="$(MSBuildProjectDirectory)"
@@ -57,6 +58,7 @@
 	<Target Name="WebWorkerBuildAfterTargetsAfterPublish" AfterTargets="AfterPublish">
 		<!-- <Message Importance="high" Text="********************** SpawnDev.BlazorJS.WebWorkers AfterTargets AfterPublish" /> -->
 		<ImportShimBlazorWASM
+			ServiceWorkerAssetsManifest="$(ServiceWorkerAssetsManifest)"
 			PatchFramework="$(WebWorkerPatchFramework)"
 			StaticWebAsset="@(StaticWebAsset)"
 			ProjectDir="$(MSBuildProjectDirectory)"

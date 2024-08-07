@@ -1,10 +1,13 @@
 ﻿using Microsoft.Build.Framework;
+using System;
 using System.IO;
 
 namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
 {
     public class ImportShimBlazorWASM : Microsoft.Build.Utilities.Task
     {
+
+        public string ServiceWorkerAssetsManifest { get; set; }
 
         [Required]
         public ITaskItem[] StaticWebAsset { get; set; }
@@ -37,7 +40,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
 
         public override bool Execute()
         {
-            // Log.LogWarning($"**********************************  ImportShimBlazorWASM.Execute  **********************************");
+            Console.WriteLine($">> ServiceWorkerAssetsManifest: {ServiceWorkerAssetsManifest}");
             if (DebugSpawnDevWebWorkersBuildTasks)
             {
                 System.Diagnostics.Debugger.Launch();
@@ -48,8 +51,14 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
             }
             OutputWwwroot = Path.GetFullPath(Path.Combine(OutputPath, "wwwroot"));
             PackageContentDir = Path.GetFullPath(PackageContentDir);
-            var patcher = new BlazorWASMFrameworkTool(OutputWwwroot, PackageContentDir);
+            var patcher = new BlazorWASMFrameworkTool(OutputWwwroot, PackageContentDir, ServiceWorkerAssetsManifest);
+            // patch Blazor _framework files to allow running in non-window scopes
             patcher.ImportPatch();
+            // if the app has an `service-worker-assets.js` file, some hashes may need to be updated due to file patching
+            if (PublishMode)
+            {
+                patcher.VerifyAssetsManifest();
+            }
             return true;
         }
     }

@@ -6,11 +6,11 @@
     public class AssetManifest
     {
         /// <summary>
-        /// Asset list
+        /// Assets
         /// </summary>
         public List<ManifestAsset> Assets { get; set; }
         /// <summary>
-        /// Asset manifest version
+        /// Version
         /// </summary>
         public string Version { get; set; }
     }
