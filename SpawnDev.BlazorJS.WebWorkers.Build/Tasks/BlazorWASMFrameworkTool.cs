@@ -38,14 +38,12 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
             {
                 throw new Exception("_framework directory not found");
             }
-            //Console.WriteLine($"frameworkPath: [{FrameworkDir}]");
             var dotnetJSPublishPath = Path.Combine(FrameworkDir, "dotnet.js");
             IsPublishBuild = File.Exists(dotnetJSPublishPath);
             if (!IsPublishBuild && !File.Exists(dotnetJSPublishPath))
             {
                 throw new Exception("dotnet.js not found");
             }
-            //Console.WriteLine($"IsPublishBuild: {IsPublishBuild}");
             if (!File.Exists(PatchJSPath))
             {
                 throw new Exception("patch.js not found");
@@ -173,7 +171,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 var changed = orig != js;
                 if (changed)
                 {
-                    Console.WriteLine($"Patched: {filename}");
+                    if (Verbose) Console.WriteLine($"Patched: {filename}");
                     // add patched marker
                     js = patchedTag + newLine + js;
                     // save patched version
@@ -181,6 +179,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 }
             }
         }
+        static bool Verbose = false;
         public void VerifyAssetsManifest()
         {
             if (string.IsNullOrEmpty(AssetManifestFilePath) || !File.Exists(AssetManifestFilePath))
@@ -195,7 +194,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 return;
             }
             var version = assetsManifestFile.Version;
-            Console.WriteLine($"Asset manifest loaded: {entryCount} {version}");
+            if (Verbose) Console.WriteLine($"Asset manifest loaded: {entryCount} {version}");
             foreach (var entry in assetsManifestFile.Assets)
             {
                 var relativePath = entry.Url.Replace('/', Path.DirectorySeparatorChar);
@@ -210,17 +209,17 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 {
                     entry.Hash = fileHash;
                     manifestUpdated = true;
-                    Console.WriteLine($"Asset manifest entry updated: {entry.Url} {fileHash}");
+                    if (Verbose) Console.WriteLine($"Asset manifest entry updated: {entry.Url} {fileHash}");
                 }
             }
             if (manifestUpdated)
             {
                 WriteAssetManifest(AssetManifestFilePath, assetsManifestFile);
-                Console.WriteLine($"Asset manifest was updated");
+                if (Verbose) Console.WriteLine($"Asset manifest was updated");
             }
             else
             {
-                Console.WriteLine($"Asset manifest was not modified");
+                if (Verbose) Console.WriteLine($"Asset manifest was not modified");
             }
         }
         private static AssetManifest ReadServiceWorkerAssetsManifest(string assetsManifestPath)

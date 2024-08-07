@@ -40,7 +40,6 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
 
         public override bool Execute()
         {
-            Console.WriteLine($">> ServiceWorkerAssetsManifest: {ServiceWorkerAssetsManifest}");
             if (DebugSpawnDevWebWorkersBuildTasks)
             {
                 System.Diagnostics.Debugger.Launch();
@@ -51,13 +50,17 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
             }
             OutputWwwroot = Path.GetFullPath(Path.Combine(OutputPath, "wwwroot"));
             PackageContentDir = Path.GetFullPath(PackageContentDir);
-            var patcher = new BlazorWASMFrameworkTool(OutputWwwroot, PackageContentDir, ServiceWorkerAssetsManifest);
+            var blazorPatchTool = new BlazorWASMFrameworkTool(OutputWwwroot, PackageContentDir, ServiceWorkerAssetsManifest);
             // patch Blazor _framework files to allow running in non-window scopes
-            patcher.ImportPatch();
+            // this needs to run after build and after publish
+            blazorPatchTool.ImportPatch();
             // if the app has an `service-worker-assets.js` file, some hashes may need to be updated due to file patching
+            // as this file is not normally used during debugging, it is only checked during publish.
+            // most patched files will already have the correct hash, but usually the Blazor build process overwrites 1 of them during publish
+            // so it is patched and the hash is updated here
             if (PublishMode)
             {
-                patcher.VerifyAssetsManifest();
+                blazorPatchTool.VerifyAssetsManifest();
             }
             return true;
         }

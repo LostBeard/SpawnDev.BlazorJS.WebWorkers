@@ -28,8 +28,8 @@
 		- Patching can be done at runtime in Javascript, or at build time. 
 		- Build time patching gives better performance and works with stricter ContentSecurityPolicy rules
 		- false - patch at runtime (current default)
-		- true  - patch during build (Not currently PWA compatible)
-		! NOTE - If using an asset manifest via the ServiceWorkerAssetsManifest project flag, some assets are modified and their hash will be updated during publish.
+		- true  - patch during build
+		! NOTE - The asset manifest file (service-worker-assets.js) will be updated during publish build if using the ServiceWorkerAssetsManifest flag and WebWorkerPatchFramework == true
 		-->
 		<WebWorkerPatchFramework>false</WebWorkerPatchFramework>
 	</PropertyGroup>
