@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.11.35103.136
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnDev.BlazorJS.WebWorkers", "SpawnDev.BlazorJS.WebWorkers\SpawnDev.BlazorJS.WebWorkers.csproj", "{6199BC07-1C75-408A-B485-25D4A483DE1A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A855E2C2-27D1-4494-A9CA-58EBF11DC34D} = {A855E2C2-27D1-4494-A9CA-58EBF11DC34D}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnDev.BlazorJS.WebWorkers.Build", "SpawnDev.BlazorJS.WebWorkers.Build\SpawnDev.BlazorJS.WebWorkers.Build.csproj", "{A855E2C2-27D1-4494-A9CA-58EBF11DC34D}"
 EndProject
