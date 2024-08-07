@@ -82,6 +82,11 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
         /// </summary>
         public void ImportPatch()
         {
+            // Example framework files that will be patched
+            // - _framework/blazor.webassembly.js
+            // - _framework/dotnet.js
+            // - _framework/dotnet.native.8.0.7.37dkch2d2y.js
+            // - _framework/dotnet.runtime.8.0.7.urcsr75yt5.js
             var frameworkDirJSFiles = Directory.GetFiles(FrameworkDir, "*.js");
             var patchedTag = "// FRAMEWORK-PATCHED";
             foreach (var jsFile in frameworkDirJSFiles)
