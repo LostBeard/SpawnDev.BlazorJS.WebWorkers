@@ -7,7 +7,7 @@
 - [TaskPool](#webworkerservicetaskpool) support via WebWorkers
 - Component's can call their own private static methods in background threads (supports service injection)
 - Supports method parameter service injection via `[FromServices]` parameter attribute
-- Works in Blazor WASM .Net 6, 7, and 8.
+- Works in Blazor WASM .Net 6, 7, 8, and 9.
 - SharedArrayBuffer is not required. No special HTTP headers to configure.
 - Supports and uses transferable objects whenever possible
 - Run Blazor WASM in a ServiceWorker
@@ -15,7 +15,7 @@
 [Live Demo](https://blazorjs.spawndev.com/)  
 
 ### Supported .Net Versions
-- Blazor WebAssembly .Net 6, 7, and 8 
+- Blazor WebAssembly .Net 6, 7, 8, and 9
 - - Tested VS Template: Blazor WebAssembly Standalone App
 - Blazor United .Net 8 (in WebAssembly project only) 
 - - Tested VS Template: Blazor Web App (Interactive WebAssembly mode without prerendering)
