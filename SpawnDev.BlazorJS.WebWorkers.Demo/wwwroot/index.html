@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="SpawnDev.BlazorJS.WebWorkers.Demo.styles.css" rel="stylesheet" />
+    <script>
+        if (typeof SharedArrayBuffer === 'undefined') {
+            const memory = new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true });
+            globalThis.SharedArrayBuffer = memory.buffer.constructor;
+        }
+    </script>
 </head>
 
 <body>
