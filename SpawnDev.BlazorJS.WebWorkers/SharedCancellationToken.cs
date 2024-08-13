@@ -7,22 +7,25 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// SharedCancellationToken is a class that uses a SharedArrayBuffer to allow checking if a task has been cancelled by another browser thread<br/>
     /// synchronously and without relying on message event handling.<br/>
     /// </summary>
+    [JsonConverter(typeof(SpawnDev.BlazorJS.JsonConverters.HybridObjectConverter<SharedCancellationToken>))]
     public class SharedCancellationToken : IDisposable
     {
-
+        // JsonInclude on non-public properties is supported by HybridObjectConverter
         [JsonInclude]
         [JsonPropertyName("cancelled")]
-        internal bool _cancelled = false;
+        private bool _cancelled { get; set; } = false;
 
+        // JsonInclude on non-public properties is supported by HybridObjectConverter
         [JsonInclude]
         [JsonPropertyName("source")]
-        internal SharedCancellationTokenSource? _source = null;
+        private SharedCancellationTokenSource? _source { get; set; } = null;
         internal SharedCancellationToken(SharedCancellationTokenSource source)
         {
             _source = source;
         }
+        // json constructor (HybridObjectConverter will use this because it is marked JsonConstructorAttribute)
         [JsonConstructor]
-        internal SharedCancellationToken() { }
+        private SharedCancellationToken() { }
         /// <summary>
         /// Creates an instance of SharedCancellationToken and setting the cancelled state that cannot be cancelled in the future
         /// </summary>

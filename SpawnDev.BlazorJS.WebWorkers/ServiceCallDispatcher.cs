@@ -762,7 +762,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                                 }
                             case ServiceLifetime.Transient:
                                 {
-                                    using(var scope = ServiceProvider.CreateScope())
+                                    using (var scope = ServiceProvider.CreateScope())
                                     {
                                         return scope.ServiceProvider.GetService(info.ServiceType);
                                     }

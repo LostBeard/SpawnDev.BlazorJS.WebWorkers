@@ -4,21 +4,21 @@
 		<TargetFrameworks>net9.0;net8.0;net7.0;net6.0</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Version>2.5.6</Version>
+		<Version>2.5.8</Version>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<EmbedAllSources>true</EmbedAllSources>
 		<DebugType>Embedded</DebugType>
 		<Title>SpawnDev.BlazorJS.WebWorkers</Title>
 		<Authors>LostBeard</Authors>
-		<Description>Easily call Services in separate threads with WebWorkers and SharedWebWorkers. Run Blazor WASM in the ServiceWorker.</Description>
+		<Description>Call Services and static methods in separate threads with WebWorkers and SharedWebWorkers. Run Blazor WASM in the ServiceWorker.</Description>
 		<PackageProjectUrl>https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers</PackageProjectUrl>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 		<PackageIcon>icon-128.png</PackageIcon>
 		<RepositoryUrl>https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers.git</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<PackageTags>Blazor;BlazorWebAssembly;Multithreading;DotNet</PackageTags>
+		<PackageTags>Blazor;BlazorWebAssembly;MultiThreading;ServiceWorker;WebWorker</PackageTags>
 		<NoPackageAnalysis>true</NoPackageAnalysis>
 		<EnableDefaultCompileItems>true</EnableDefaultCompileItems>
 		<IsPackable>true</IsPackable>
@@ -81,9 +81,9 @@
 	<ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0-preview.6.24328.4" />
 	</ItemGroup>
-
+	
 	<ItemGroup>
-		<PackageReference Include="SpawnDev.BlazorJS" Version="2.5.6" />
+		<PackageReference Include="SpawnDev.BlazorJS" Version="2.5.8" />
 	</ItemGroup>
 
 	<ItemGroup>

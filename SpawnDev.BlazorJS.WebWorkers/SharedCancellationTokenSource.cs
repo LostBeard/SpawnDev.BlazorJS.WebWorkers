@@ -9,6 +9,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// which can be passed to WekWorkers to allow workers a synchronous method of checking for a cancellation flag set in another thread<br/>
     /// Requires globalThis.crossOriginIsolated == true due to using SharedArrayBuffer for cancellation signaling
     /// </summary>
+    [JsonConverter(typeof(SpawnDev.BlazorJS.JsonConverters.HybridObjectConverter<SharedCancellationTokenSource>))]
     public class SharedCancellationTokenSource : IDisposable
     {
         private static BlazorJSRuntime JS => BlazorJSRuntime.JS;
@@ -22,9 +23,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             get
             {
                 if (_cancelled) return true;
-                if (SharedArrayBuffer != null)
+                if (_sharedArrayBuffer != null)
                 {
-                    SharedArrayBufferView ??= new Uint8Array(SharedArrayBuffer);
+                    SharedArrayBufferView ??= new Uint8Array(_sharedArrayBuffer);
                     var cancelledFlag = Atomics.Load(SharedArrayBufferView, 0);
                     if (cancelledFlag != 0)
                     {
@@ -38,14 +39,16 @@ namespace SpawnDev.BlazorJS.WebWorkers
 
         private Uint8Array? SharedArrayBufferView = null;
 
+        // JsonInclude on non-public properties is supported by HybridObjectConverter
         [JsonInclude]
         [JsonPropertyName("sharedArrayBuffer")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        private SharedArrayBuffer? SharedArrayBuffer { get; set; }
+        private SharedArrayBuffer? _sharedArrayBuffer { get; set; }
 
+        // JsonInclude on non-public properties is supported by HybridObjectConverter
         [JsonInclude]
         [JsonPropertyName("cancelled")]
-        private bool _cancelled = false;
+        private bool _cancelled { get; set; } = false;
 
         private SharedCancellationToken? _token;
         /// <summary>
@@ -59,9 +62,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 ThrowIfDisposed();
                 if (_token == null)
                 {
-                    if (!_cancelled && SharedArrayBuffer != null)
+                    if (!_cancelled && _sharedArrayBuffer != null)
                     {
-                        _token = new SharedCancellationToken(new SharedCancellationTokenSource() { SharedArrayBuffer = SharedArrayBuffer });
+                        _token = new SharedCancellationToken(new SharedCancellationTokenSource() { _sharedArrayBuffer = _sharedArrayBuffer });
                     }
                     else
                     {
@@ -71,9 +74,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 return _token;
             }
         }
-        // json constructor
+        // json constructor (HybridObjectConverter will use this because it is marked JsonConstructorAttribute)
         [JsonConstructor]
-        internal SharedCancellationTokenSource() { }
+        private SharedCancellationTokenSource() { }
         /// <summary>
         /// Creates a new instance with a pre-set cancelled state
         /// </summary>
@@ -82,12 +85,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (!cancelled)
             {
-                if (!CrossOriginIsolated)
-                {
-                    throw new NotSupportedException("Failed to create SharedCancellationTokenSource. CrossOriginIsolated is required due to SharedArrayBuffer restrictions");
-                }
-                SharedArrayBuffer = new SharedArrayBuffer(BUFFER_SIZE);
-                SharedArrayBufferView = new Uint8Array(SharedArrayBuffer);
+                //if (!CrossOriginIsolated)
+                //{
+                //    throw new NotSupportedException("Failed to create SharedCancellationTokenSource. CrossOriginIsolated is required due to SharedArrayBuffer restrictions");
+                //}
+                _sharedArrayBuffer = new SharedArrayBuffer(BUFFER_SIZE);
+                SharedArrayBufferView = new Uint8Array(_sharedArrayBuffer);
             }
             else
             {
@@ -100,12 +103,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="cancelAfterMillisecondDelay"></param>
         public SharedCancellationTokenSource(int cancelAfterMillisecondDelay)
         {
-            if (!CrossOriginIsolated)
-            {
-                throw new NotSupportedException("Failed to create SharedCancellationTokenSource. CrossOriginIsolated is required due to SharedArrayBuffer restrictions");
-            }
-            SharedArrayBuffer = new SharedArrayBuffer(BUFFER_SIZE);
-            SharedArrayBufferView = new Uint8Array(SharedArrayBuffer);
+            //if (!CrossOriginIsolated)
+            //{
+            //    throw new NotSupportedException("Failed to create SharedCancellationTokenSource. CrossOriginIsolated is required due to SharedArrayBuffer restrictions");
+            //}
+            _sharedArrayBuffer = new SharedArrayBuffer(BUFFER_SIZE);
+            SharedArrayBufferView = new Uint8Array(_sharedArrayBuffer);
             CancelAfter(cancelAfterMillisecondDelay);
         }
         /// <summary>
@@ -120,9 +123,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (IsDisposed) return;
             if (IsCancellationRequested) return;
-            if (SharedArrayBuffer == null) return;
+            if (_sharedArrayBuffer == null) return;
             _cancelled = true;
-            SharedArrayBufferView ??= new Uint8Array(SharedArrayBuffer);
+            SharedArrayBufferView ??= new Uint8Array(_sharedArrayBuffer);
             Atomics.Store<byte>(SharedArrayBufferView, 0, 1);
         }
         /// <summary>
@@ -164,10 +167,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 SharedArrayBufferView.Dispose();
                 SharedArrayBufferView = null;
             }
-            if (SharedArrayBuffer != null)
+            if (_sharedArrayBuffer != null)
             {
-                SharedArrayBuffer.Dispose();
-                SharedArrayBuffer = null;
+                _sharedArrayBuffer.Dispose();
+                _sharedArrayBuffer = null;
             }
             if (_token != null)
             {
