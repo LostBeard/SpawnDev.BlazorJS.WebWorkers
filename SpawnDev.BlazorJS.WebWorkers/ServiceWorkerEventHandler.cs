@@ -183,9 +183,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 ret = await JS.Fetch(e.Request);
             }
-            catch (Exception ex)
+            catch
             {
-                ret = new Response(ex.Message, new ResponseOptions { Status = 500, StatusText = ex.Message, Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } } });
+                // Exceptions must be caught or they will be 'uncaught'
+                // Respond with an errored Response
+                ret = Response.Error();
             }
             return ret;
         }
