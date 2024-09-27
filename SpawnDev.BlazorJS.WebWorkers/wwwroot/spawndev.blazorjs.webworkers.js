@@ -74,7 +74,7 @@ if (globalThisTypeName == 'SharedWorkerGlobalScope') {
     // e.waitUntil is used during the install event to allow importScripts inside async functions
     // it is resolved after loading is complete
     let holdEvents = true;
-    let missedServiceWorkerEventts = [];
+    let missedServiceWorkerEvents = [];
     function handleMissedEvent(e) {
         if (!holdEvents) return;
         consoleLog('ServiceWorker missed event:', e.type, e);
@@ -92,7 +92,7 @@ if (globalThisTypeName == 'SharedWorkerGlobalScope') {
             });
             e.respondWith(responsePromise);
         }
-        missedServiceWorkerEventts.push(e);
+        missedServiceWorkerEvents.push(e);
     }
     self.addEventListener('install', handleMissedEvent);
     self.addEventListener('activate', handleMissedEvent);
@@ -106,8 +106,8 @@ if (globalThisTypeName == 'SharedWorkerGlobalScope') {
     // This method will be called by Blazor WASM when it starts up to collect missed events and handle them
     self.GetMissedServiceWorkerEvents = function () {
         holdEvents = false;
-        var ret = missedServiceWorkerEventts;
-        missedServiceWorkerEventts = [];
+        var ret = missedServiceWorkerEvents;
+        missedServiceWorkerEvents = [];
         return ret;
     };
 }

@@ -248,10 +248,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         var response = await ServiceWorker_OnFetchAsync(e);
                         missedEvent.ResponseResolve(response);
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Console.Error.WriteLine(ex.ToString());
-                        missedEvent.ResponseReject();
+                        missedEvent.ResponseResolve(Response.Error());
                     }
                 });
             }
