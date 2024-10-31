@@ -151,78 +151,80 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Creates a new instance of WebWorkerService
         /// </summary>
-        /// <param name="navigationManager"></param>
         /// <param name="webAssemblyServices"></param>
-        /// <param name="hostEnvironment"></param>
         /// <param name="js"></param>
-        public WebWorkerService(NavigationManager navigationManager, IWebAssemblyServices webAssemblyServices, IWebAssemblyHostEnvironment hostEnvironment, BlazorJSRuntime js)
+        public WebWorkerService(IWebAssemblyServices webAssemblyServices, BlazorJSRuntime js)
         {
             JS = js;
             GlobalScope = JS.GlobalScope;
             InstanceId = JS.InstanceId;
             WebAssemblyServices = webAssemblyServices;
-            WebWorkerSupported = !JS.IsUndefined("Worker");
-            SharedWebWorkerSupported = !JS.IsUndefined("SharedWorker");
-            ServiceWorkerSupported = !JS.IsUndefined("ServiceWorkerRegistration");
             ServiceProvider = WebAssemblyServices.Services;
             ServiceDescriptors = WebAssemblyServices.Descriptors;
-            AppBaseUri = JS.Get<string>("document.baseURI");
-            var workerScriptUri = new Uri(new Uri(AppBaseUri), WebWorkerJSScript);
-            WebWorkerJSScript = workerScriptUri.ToString();
-            Locks = JS.Get<LockManager>("navigator.locks");
-            LockManagerSupported = Locks != null;
-            var queryParams = HttpUtility.ParseQueryString(new Uri(navigationManager.Uri).Query);
-            var isTaskPoolWorker = queryParams["taskPool"] == "1" && JS.IsScope(GlobalScope.DedicatedAndSharedWorkers);
-            Info = new AppInstanceInfo
+            if (JS.IsBrowser)
             {
-                InstanceId = InstanceId,
-                Scope = GlobalScope,
-                Name = GetName(),
-                BaseUrl = AppBaseUri,
-                Url = navigationManager.Uri,
-                TaskPoolWorker = isTaskPoolWorker,
-            };
-            BroadcastChannelSupported = !JS.IsUndefined(nameof(BroadcastChannel));
-            if (BroadcastChannelSupported)
-            {
-                // this is the BroadcastChannel all instances will send their instance info on at startup
-                SharedBroadcastChannel = new BroadcastChannel(nameof(WebWorkerService));
-                SharedBroadcastChannel.OnMessage += SharedBroadcastChannel_OnMessage;
-                // this is the BroadcastChannel the interconnect shared worker will message this instance on when messages are waiting
-                // - the message contains the from instance info object and a MessagePort
-                // if shared workers are not supported, instead of interconnect, a separate broadcast channel will be used and the request will come on this channel
-                // - the message contains the from instance info object and a broadcast channel name to use for the connection
-                InstanceBroadcastChannel = new BroadcastChannel(InstanceId);
-                InstanceBroadcastChannel.OnMessage += InstanceBroadcastChannel_OnMessage;
-            }
-            InterConnectSupported = SharedWebWorkerSupported && BroadcastChannelSupported;
+                WebWorkerSupported = !JS.IsUndefined("Worker");
+                SharedWebWorkerSupported = !JS.IsUndefined("SharedWorker");
+                ServiceWorkerSupported = !JS.IsUndefined("ServiceWorkerRegistration");
+                AppBaseUri = JS.Get<string>("document.baseURI");
+                var locationHref = JS.Get<string>("location.href");
+                var workerScriptUri = new Uri(new Uri(AppBaseUri), WebWorkerJSScript);
+                WebWorkerJSScript = workerScriptUri.ToString();
+                Locks = JS.Get<LockManager>("navigator.locks");
+                LockManagerSupported = Locks != null;
+                var queryParams = HttpUtility.ParseQueryString(new Uri(locationHref).Query);
+                var isTaskPoolWorker = queryParams["taskPool"] == "1" && JS.IsScope(GlobalScope.DedicatedAndSharedWorkers);
+                Info = new AppInstanceInfo
+                {
+                    InstanceId = InstanceId,
+                    Scope = GlobalScope,
+                    Name = GetName(),
+                    BaseUrl = AppBaseUri,
+                    Url = locationHref,
+                    TaskPoolWorker = isTaskPoolWorker,
+                };
+                BroadcastChannelSupported = !JS.IsUndefined(nameof(BroadcastChannel));
+                if (BroadcastChannelSupported)
+                {
+                    // this is the BroadcastChannel all instances will send their instance info on at startup
+                    SharedBroadcastChannel = new BroadcastChannel(nameof(WebWorkerService));
+                    SharedBroadcastChannel.OnMessage += SharedBroadcastChannel_OnMessage;
+                    // this is the BroadcastChannel the interconnect shared worker will message this instance on when messages are waiting
+                    // - the message contains the from instance info object and a MessagePort
+                    // if shared workers are not supported, instead of interconnect, a separate broadcast channel will be used and the request will come on this channel
+                    // - the message contains the from instance info object and a broadcast channel name to use for the connection
+                    InstanceBroadcastChannel = new BroadcastChannel(InstanceId);
+                    InstanceBroadcastChannel.OnMessage += InstanceBroadcastChannel_OnMessage;
+                }
+                InterConnectSupported = SharedWebWorkerSupported && BroadcastChannelSupported;
 #if DEBUG && false
-            Console.WriteLine($"InterConnectSupported: {InterConnectSupported}");
-            Console.WriteLine("hostEnvironment.BaseAddress: " + hostEnvironment.BaseAddress);
-            Console.WriteLine("AppBaseUri: " + AppBaseUri);
-            Console.WriteLine("WebWorkerJSScript: " + WebWorkerJSScript);
+                Console.WriteLine($"InterConnectSupported: {InterConnectSupported}");
+                Console.WriteLine("hostEnvironment.BaseAddress: " + hostEnvironment.BaseAddress);
+                Console.WriteLine("AppBaseUri: " + AppBaseUri);
+                Console.WriteLine("WebWorkerJSScript: " + WebWorkerJSScript);
 #endif
-            var hardwareConcurrency = JS.Get<int?>("navigator.hardwareConcurrency");
-            MaxWorkerCount = hardwareConcurrency ?? 0;
-            if (IServiceCollectionExtensions.ServiceWorkerConfig != null)
-            {
-                ServiceWorkerConfig = IServiceCollectionExtensions.ServiceWorkerConfig;
-            };
-            if (ServiceWorkerConfig == null) ServiceWorkerConfig = new ServiceWorkerConfig { Register = ServiceWorkerStartupRegistration.None };
-            if (string.IsNullOrEmpty(ServiceWorkerConfig.ScriptURL))
-            {
-                ServiceWorkerConfig.ScriptURL = WebWorkerJSScript;
-            }
-            Local = new ServiceCallDispatcher(WebAssemblyServices);
-            if (isTaskPoolWorker)
-            {
-                // task pool workers have their TaskPool.MaxWorkerPoolCount locked to 0.
-                // It can be unlocked, but this prevents apps that auto-start TaskPool workers from accidentally auto-starting task pool workers recursively
-                TaskPool = new WebWorkerPool(this, 0, 0, false, true, true);
-            }
-            else
-            {
-                TaskPool = new WebWorkerPool(this, 0, 1, true);
+                var hardwareConcurrency = JS.Get<int?>("navigator.hardwareConcurrency");
+                MaxWorkerCount = hardwareConcurrency ?? 0;
+                if (IServiceCollectionExtensions.ServiceWorkerConfig != null)
+                {
+                    ServiceWorkerConfig = IServiceCollectionExtensions.ServiceWorkerConfig;
+                };
+                if (ServiceWorkerConfig == null) ServiceWorkerConfig = new ServiceWorkerConfig { Register = ServiceWorkerStartupRegistration.None };
+                if (string.IsNullOrEmpty(ServiceWorkerConfig.ScriptURL))
+                {
+                    ServiceWorkerConfig.ScriptURL = WebWorkerJSScript;
+                }
+                Local = new ServiceCallDispatcher(WebAssemblyServices);
+                if (isTaskPoolWorker)
+                {
+                    // task pool workers have their TaskPool.MaxWorkerPoolCount locked to 0.
+                    // It can be unlocked, but this prevents apps that auto-start TaskPool workers from accidentally auto-starting task pool workers recursively
+                    TaskPool = new WebWorkerPool(this, 0, 0, false, true, true);
+                }
+                else
+                {
+                    TaskPool = new WebWorkerPool(this, 0, 1, true);
+                }
             }
         }
         BroadcastChannel? InstanceBroadcastChannel = null;
@@ -520,67 +522,70 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (BeenInit) return;
             BeenInit = true;
-            if (Locks != null)
+            if (JS.IsBrowser)
             {
-                Info.ClientId = await Locks.GetClientId();
-            }
-            if (JS.GlobalThis is Window window)
-            {
-                WindowTask = Local;
-                switch (ServiceWorkerConfig.Register)
+                if (Locks != null)
                 {
-                    case ServiceWorkerStartupRegistration.Register:
-                        await RegisterServiceWorker();
-                        break;
-                    case ServiceWorkerStartupRegistration.Unregister:
-                        await UnregisterServiceWorker();
-                        break;
+                    Info.ClientId = await Locks.GetClientId();
                 }
-            }
-            else if (JS.GlobalThis is DedicatedWorkerGlobalScope workerGlobalScope)
-            {
-                DedicatedWorkerParent = new ServiceCallDispatcher(WebAssemblyServices, workerGlobalScope);
-                DedicatedWorkerParent.SendReadyFlag();
-                Async.Run(async () =>
+                if (JS.GlobalThis is Window window)
                 {
-                    await DedicatedWorkerParent.WhenReady;
-                    var isParentAWindow = DedicatedWorkerParent.RemoteInfo!.GlobalThisTypeName == "Window";
-                    if (isParentAWindow)
+                    WindowTask = Local;
+                    switch (ServiceWorkerConfig.Register)
                     {
-                        WindowTask = DedicatedWorkerParent;
-                    }
-                    OnDedicatedWorkerParentReady?.Invoke();
-                    Info.ParentInstanceId = DedicatedWorkerParent.RemoteInfo.InstanceId;
-                    await RegisterInstance();
-                });
-                return;
-            }
-            else if (JS.GlobalThis is SharedWorkerGlobalScope sharedWorkerGlobalScope)
-            {
-                var missedConnections = JS.Call<MessagePort[]>("takeOverOnConnectEvent", OnSharedWorkerConnectCallback = Callback.Create<MessageEvent>(OnSharedWorkerConnect));
-                if (missedConnections != null)
-                {
-                    foreach (var m in missedConnections)
-                    {
-                        AddIncomingPort(m);
+                        case ServiceWorkerStartupRegistration.Register:
+                            await RegisterServiceWorker();
+                            break;
+                        case ServiceWorkerStartupRegistration.Unregister:
+                            await UnregisterServiceWorker();
+                            break;
                     }
                 }
-                var tmpName = sharedWorkerGlobalScope.Name;
-                if (!string.IsNullOrEmpty(tmpName))
+                else if (JS.GlobalThis is DedicatedWorkerGlobalScope workerGlobalScope)
                 {
-                    ThisSharedWorkerName = tmpName;
+                    DedicatedWorkerParent = new ServiceCallDispatcher(WebAssemblyServices, workerGlobalScope);
+                    DedicatedWorkerParent.SendReadyFlag();
+                    Async.Run(async () =>
+                    {
+                        await DedicatedWorkerParent.WhenReady;
+                        var isParentAWindow = DedicatedWorkerParent.RemoteInfo!.GlobalThisTypeName == "Window";
+                        if (isParentAWindow)
+                        {
+                            WindowTask = DedicatedWorkerParent;
+                        }
+                        OnDedicatedWorkerParentReady?.Invoke();
+                        Info.ParentInstanceId = DedicatedWorkerParent.RemoteInfo.InstanceId;
+                        await RegisterInstance();
+                    });
+                    return;
                 }
+                else if (JS.GlobalThis is SharedWorkerGlobalScope sharedWorkerGlobalScope)
+                {
+                    var missedConnections = JS.Call<MessagePort[]>("takeOverOnConnectEvent", OnSharedWorkerConnectCallback = Callback.Create<MessageEvent>(OnSharedWorkerConnect));
+                    if (missedConnections != null)
+                    {
+                        foreach (var m in missedConnections)
+                        {
+                            AddIncomingPort(m);
+                        }
+                    }
+                    var tmpName = sharedWorkerGlobalScope.Name;
+                    if (!string.IsNullOrEmpty(tmpName))
+                    {
+                        ThisSharedWorkerName = tmpName;
+                    }
+                }
+                else if (JS.GlobalThis is ServiceWorkerGlobalScope serviceWorkerGlobalScope)
+                {
+                    //Console.WriteLine($"WebWorkerService: ServiceWorkerGlobalScope");
+                    // 
+                }
+                else
+                {
+                    //Console.WriteLine($"WebWorkerService: UNKNOWN");
+                }
+                await RegisterInstance();
             }
-            else if (JS.GlobalThis is ServiceWorkerGlobalScope serviceWorkerGlobalScope)
-            {
-                //Console.WriteLine($"WebWorkerService: ServiceWorkerGlobalScope");
-                // 
-            }
-            else
-            {
-                //Console.WriteLine($"WebWorkerService: UNKNOWN");
-            }
-            await RegisterInstance();
         }
         /// <summary>
         /// Returns true if this instance has notified other instances
