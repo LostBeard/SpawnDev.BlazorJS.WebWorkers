@@ -111,9 +111,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     return $"{name}<{genericArguments}>";
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                var nmt = true;
+                // continue
             }
             return mi.Name;
         }
@@ -128,16 +128,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public static Type GetFinalReturnType(this MethodInfo _this)
         {
             return _this.ReturnType.AsyncReturnType() ?? _this.ReturnType;
-        }
-
-        public static Task<object?> InvokeAsync(this Delegate _this, object? instance, object[] args)
-        {
-            return InvokeAsync(_this.Method, instance, args);
-        }
-
-        public static object? Invoke(this Delegate _this, object? instance, object[] args)
-        {
-            return _this.Invoke(instance, args);
         }
 
         /// <summary>
