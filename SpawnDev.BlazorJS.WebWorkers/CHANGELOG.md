@@ -1,6 +1,18 @@
 # Changelog
 
 
+## [2.5.15] - 2024-11-15
+
+### Changed
+- Updated SpawnDev.BlazorJS dependency to 2.5.15
+
+
+## [2.5.14] - 2024-11-14
+
+### Changed
+- Updated SpawnDev.BlazorJS dependency to 2.5.14
+
+
 ## [2.5.13] - 2024-11-12
 
 ### Changed
