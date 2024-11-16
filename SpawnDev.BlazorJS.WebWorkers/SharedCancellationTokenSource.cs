@@ -9,7 +9,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// which can be passed to WekWorkers to allow workers a synchronous method of checking for a cancellation flag set in another thread<br/>
     /// Requires globalThis.crossOriginIsolated == true due to using SharedArrayBuffer for cancellation signaling
     /// </summary>
-    [JsonConverter(typeof(SpawnDev.BlazorJS.JsonConverters.HybridObjectConverter<SharedCancellationTokenSource>))]
+    [JsonConverter(typeof(JsonConverters.HybridObjectConverterFactory))]
     public class SharedCancellationTokenSource : IDisposable
     {
         private static BlazorJSRuntime JS => BlazorJSRuntime.JS;

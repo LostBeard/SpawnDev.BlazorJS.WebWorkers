@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [2.5.17] - 2024-11-15
+
+### Changed
+- Updated SpawnDev.BlazorJS dependency to 2.5.17
+
+### Fixed
+- Fixed JsonConverterAttribute with HybridConverter and HybridConverterFactory not working (Ex: SharedCancellationTokenSource)
+
+
 ## [2.5.16] - 2024-11-15
 
 ### Changed
