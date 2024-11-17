@@ -61,6 +61,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
 #endif
             if (returnType == null) throw new Exception("Invalid Return Type");
             ReturnType = returnType;
+        }
+        internal void Process()
+        {
+            var returnType = ReturnType;
             if (typeof(Type).IsAssignableFrom(returnType))
             {
                 useDefaultReader = true;
@@ -302,15 +306,16 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 return conversionInfo;
             }
+            conversionInfo = new TypeConversionInfo(type);
+            _conversionInfo[type] = conversionInfo;
             try
             {
-                conversionInfo = new TypeConversionInfo(type);
+                conversionInfo.Process();
             }
             catch (Exception ex)
             {
                 Console.WriteLine("TypeConversionInfo error: " + ex.ToString());
             }
-            _conversionInfo[type] = conversionInfo;
             return conversionInfo;
         }
     }
