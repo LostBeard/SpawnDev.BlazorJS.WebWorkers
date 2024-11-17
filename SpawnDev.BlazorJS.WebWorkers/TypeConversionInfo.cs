@@ -220,8 +220,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         catch { }
                         if (propVal == null) continue;
                         var conversionInfo = GetTypeConversionInfo(prop.PropertyType);
-                        var tmpp = conversionInfo.GetTransferablePropertyValues(propVal);
-                        ret.AddRange(tmpp);
+                        var propertyTransferables = conversionInfo.GetTransferablePropertyValues(propVal);
+                        ret.AddRange(propertyTransferables);
                     }
                 }
                 else if (useJSObjectReader)
@@ -252,8 +252,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         }
                         if (propVal == null) continue;
                         var conversionInfo = GetTypeConversionInfo(prop.PropertyType);
-                        var tmpp = conversionInfo.GetTransferablePropertyValues(propVal);
-                        ret.AddRange(tmpp);
+                        var propertyTransferables = conversionInfo.GetTransferablePropertyValues(propVal);
+                        ret.AddRange(propertyTransferables);
                     }
                 }
                 else if (useIterationReader && ElementType != null && obj is IEnumerable enumarable)
@@ -262,8 +262,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     foreach (var ival in enumarable)
                     {
                         if (ival == null) continue;
-                        var tmpp = conversionInfo.GetTransferablePropertyValues(ival);
-                        ret.AddRange(tmpp);
+                        var propertyTransferables = conversionInfo.GetTransferablePropertyValues(ival);
+                        ret.AddRange(propertyTransferables);
                     }
                 }
                 else if (useDictionaryReader)
@@ -279,13 +279,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
                                 var value = dict[key];
                                 if (key != null)
                                 {
-                                    var tmpp = keyTypeConversionInfo.GetTransferablePropertyValues(key);
-                                    ret.AddRange(tmpp);
+                                    var propertyTransferables = keyTypeConversionInfo.GetTransferablePropertyValues(key);
+                                    ret.AddRange(propertyTransferables);
                                 }
                                 if (value != null)
                                 {
-                                    var tmpp = valueTypeConversionInfo.GetTransferablePropertyValues(value);
-                                    ret.AddRange(tmpp);
+                                    var propertyTransferables = valueTypeConversionInfo.GetTransferablePropertyValues(value);
+                                    ret.AddRange(propertyTransferables);
                                 }
                             }
                         }
@@ -293,8 +293,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
                 else if (useInterfaceProxy)
                 {
-                    // TODO
-                    var nmt = true;
+
                 }
             }
             return ret.ToArray();
