@@ -442,14 +442,12 @@ webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
 
 ## Worker Transferable JSObjects
 
-[Faster is better.](https://developer.chrome.com/blog/transferable-objects-lightning-fast/) SpawnDev WebWorkers use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) by default for better performance, but it can be disabled with WorkerTransferAttribute. Setting WorkerTransfer to false will cause the property, return value, or parameter to be copied to the receiving thread instead of transferred.
-
+SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. Setting WorkerTransfer to true will cause the property, return value, or parameter to be added to the transfer list so it can be transferred instead of copied.
 
 Example
 ```cs
 public class ProcessFrameResult : IDisposable
 {
-    [WorkerTransfer(false)]
     public ArrayBuffer? ArrayBuffer { get; set; }
     public byte[]? HomographyBytes { get; set; }
     public void Dispose(){
@@ -457,8 +455,8 @@ public class ProcessFrameResult : IDisposable
     }
 }
 
-[return: WorkerTransfer(false)]
-public async Task<ProcessFrameResult?> ProcessFrame([WorkerTransfer(false)] ArrayBuffer? frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
+[return: WorkerTransfer(true)]
+public async Task<ProcessFrameResult?> ProcessFrame([WorkerTransfer(true)] ArrayBuffer? frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
 {
     var ret = new ProcessFrameResult();
     // ...
@@ -466,19 +464,23 @@ public async Task<ProcessFrameResult?> ProcessFrame([WorkerTransfer(false)] Arra
 }
 ```
 
-In the above example; the WorkerTransferAttribute on the return type set to false will prevent all properties of the return type from being transferred.
+In the above example; the WorkerTransferAttribute on the return type set to `true` will cause transferable properties of the return type to be transferred.
 
 ### Transferable JSObject types. Source [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects#supported_objects)
-ArrayBuffer  
-MessagePort  
-ReadableStream  
-WritableStream  
-TransformStream 
-AudioData  
-ImageBitmap  
-VideoFrame  
-OffscreenCanvas  
-RTCDataChannel  
+- ArrayBuffer  
+- AudioData  
+- ImageBitmap  
+- MediaSourceHandle  
+- MessagePort  
+- MIDIAccess  
+- OffscreenCanvas  
+- ReadableStream  
+- RTCDataChannel  
+- TransformStream  
+- VideoFrame  
+- WebTransportReceiveStream  
+- WebTransportSendStream  
+- WritableStream  
 
 
 ## Javascript dependencies in WebWorkers
