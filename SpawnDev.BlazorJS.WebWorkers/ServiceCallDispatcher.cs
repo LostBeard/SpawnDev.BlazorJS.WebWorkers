@@ -38,12 +38,16 @@ namespace SpawnDev.BlazorJS.WebWorkers
             typeof(ArrayBuffer),
             typeof(AudioData),
             typeof(ImageBitmap),
+            typeof(MediaSourceHandle),
             typeof(MessagePort),
+            typeof(MIDIAccess),
             typeof(OffscreenCanvas),
             typeof(ReadableStream),
             typeof(RTCDataChannel),
             typeof(TransformStream),
             typeof(VideoFrame),
+            typeof(WebTransportReceiveStream),
+            typeof(WebTransportSendStream),
             typeof(WritableStream),
         };
         /// <summary>
@@ -521,16 +525,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 Console.WriteLine($"genericTypeStr: {genericTypeStr}");
 #endif
                 var coreType = genericType ?? methodParamType;
-
-                var methodParamTypeIsTransferable = IsTransferable(methodParamType);
-                var allowTransferable = methodParamType.IsClass;
-                if (allowTransferable)
+                //var methodParamTypeIsTransferable = IsTransferable(methodParamType);
+                var allowTransferable = false;
+                if (methodParamType.IsClass)
                 {
                     var transferAttr = (WorkerTransferAttribute?)methodParam.GetCustomAttribute(typeof(WorkerTransferAttribute), false);
-                    if (transferAttr != null && !transferAttr.Transfer)
+                    if (transferAttr?.Transfer == true)
                     {
                         // this property has been marked as non-transferable
-                        allowTransferable = false;
+                        allowTransferable = true;
                     }
                 }
                 var methodParamTypeName = methodParam.ParameterType.Name;
@@ -592,10 +595,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     // to get better performance when sending byte arrays we convert it to a Uint8Array reference first, and add its array buffer to the transferables list.
                     // it will still be read in on the other side as a byte array. this prevents 1 copying stage.
                     var uint8Array = new Uint8Array(bytes);
-                    if (allowTransferable)
-                    {
-                        transferableList.Add(uint8Array.Buffer);
-                    }
+                    transferableList.Add(uint8Array.Buffer);
                     ret[i] = uint8Array;
                 }
                 else
