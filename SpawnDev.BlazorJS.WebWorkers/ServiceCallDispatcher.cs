@@ -645,10 +645,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 var allowTransferable = false;
                 if (methodParamType.IsClass)
                 {
-                    var transferAttr = (WorkerTransferAttribute?)methodParam.GetCustomAttribute(typeof(WorkerTransferAttribute), false);
+                    var transferAttr = (WorkerTransferAttribute?)methodParam.GetCustomAttribute(typeof(WorkerTransferAttribute), true);
                     if (transferAttr?.Transfer == true)
                     {
-                        // this property has been marked as non-transferable
+                        // this property has been marked as transferable
                         allowTransferable = true;
                     }
                 }
@@ -716,6 +716,28 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
                 else
                 {
+                    if (methodParamType.IsClass)
+                    {
+                        var transferableAttribute = methodParamType.GetCustomAttribute<TransferableAttribute>(true);
+                        if (transferableAttribute != null)
+                        {
+                            // some transferable types MUST be transferred to be sent to a worker (Ex. OffscreenCanvas)
+                            if (allowTransferable || transferableAttribute.TransferRequired)
+                            {
+
+                                transferableList.Add(arg);
+                                ret[i] = arg;
+                                continue;
+                            }
+                        }
+                        else if (allowTransferable && arg is TypedArray typedArray)
+                        {
+                            var arrayBuffer = typedArray.Buffer;
+                            transferableList.Add(arrayBuffer);
+                            ret[i] = arg;
+                            continue;
+                        }
+                    }
                     if (allowTransferable)
                     {
                         var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(methodParamType);
@@ -857,36 +879,30 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         async Task<object?> FindServiceAsync(Type serviceType, object key)
         {
-#if DEBUG
-            Console.WriteLine($"{serviceType.Name} {key}");
-#endif
-#if NET8_0_OR_GREATER
-            var ret = await ServiceProvider.FindServiceAsync(serviceType, key);
-            if (ret == null)
+            var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && Object.Equals(o.ServiceKey, key));
+            if (runtimeServiceInfo != null)
             {
-                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && Object.Equals(o.ServiceKey, key));
-                if (runtimeServiceInfo != null)
+                if (runtimeServiceInfo.Service == null)
                 {
+                    // try creating with the key as a parameter, if it fails we'll try without it
+                    try
+                    {
+                        runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, key);
+                    }
+                    catch { }
                     if (runtimeServiceInfo.Service == null)
                     {
-                        // try creating with the key as a parameter, if it fails we'll try without it
-                        try
-                        {
-                            runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, key);
-                        }
-                        catch { }
-                        if (runtimeServiceInfo.Service == null)
-                        {
-                            runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
-                        }
-                        if (runtimeServiceInfo.Service is IAsyncService asyncService)
-                        {
-                            await asyncService.Ready;
-                        }
+                        runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
                     }
-                    return runtimeServiceInfo.Service;
+                    if (runtimeServiceInfo.Service is IAsyncService asyncService)
+                    {
+                        await asyncService.Ready;
+                    }
                 }
+                return runtimeServiceInfo.Service;
             }
+#if NET8_0_OR_GREATER
+            var ret = await ServiceProvider.FindServiceAsync(serviceType, key);
             return ret;
 #else
             return null;

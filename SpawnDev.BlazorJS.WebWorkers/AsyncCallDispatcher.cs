@@ -303,7 +303,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
             }
         }
-        protected Task CreateInstance(Expression expr, object? key, Type? serviceType)
+        protected Task CreateInstance(Expression expr, object? serviceKey, Type? serviceType)
         {
             if (expr is NewExpression newExpression)
             {
@@ -314,7 +314,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     serviceType ??= implementationType;
                     var args = newExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
                     var argsTypes = constructor.GetParameters().Select(p => p.ParameterType).ToArray();
-                    return Create(serviceType, implementationType, key, args, argsTypes);
+                    return Create(serviceType, implementationType, serviceKey, args, argsTypes);
                 }
                 else
                 {
@@ -329,8 +329,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
 
         // Create instance
-        public Task New(string key, Expression<Func<object>> expr) => CreateInstance(expr.Body, key, null);
-        public Task New<TService>(string key, Expression<Func<TService>> expr) => CreateInstance(expr.Body, key, typeof(TService));
+        public Task New(string serviceKey, Expression<Func<object>> expr) => CreateInstance(expr.Body, serviceKey, null);
+        public Task New<TService>(string serviceKey, Expression<Func<TService>> expr) => CreateInstance(expr.Body, serviceKey, typeof(TService));
         public Task New(Expression<Func<object>> expr) => CreateInstance(expr.Body, null, null);
         public Task New<TService>(Expression<Func<TService>> expr) => CreateInstance(expr.Body, null, typeof(TService));
         #region Non-Keyed
