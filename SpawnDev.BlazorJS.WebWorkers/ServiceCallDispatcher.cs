@@ -444,7 +444,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var requestId = Guid.NewGuid().ToString();
             var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
             var msgData = PreSerializeArgs(requestId, methodInfo, args, out var transferable);
-            var keyTypeName = key!.GetType().FullName;
+            var keyTypeName = TypeExtensions.GetFullName(key!.GetType());
             var msgOut = new List<object?> { markedNoReply ? "msgKeyed" : "callKeyed", keyTypeName, key, requestId, targetMethod };
             msgOut.AddRange(msgData);
             if (_port != null) _port.PostMessage(msgOut, transferable);
@@ -621,7 +621,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="args"></param>
         /// <param name="transferable"></param>
         /// <returns></returns>
-        private object?[] PreSerializeArgs(string requestId, MethodInfo methodInfo, object?[]? args, out object[] transferable)
+        private object?[] PreSerializeArgs(string requestId, MethodBase methodInfo, object?[]? args, out object[] transferable)
         {
             var transferableList = new List<object>();
             var methodsParamTypes = methodInfo.GetParameters();
@@ -758,7 +758,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="callArgs"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        private async Task<object?[]?> PostDeserializeArgs(string requestId, MethodInfo methodInfo, Array callArgs)
+        private async Task<object?[]?> PostDeserializeArgs(string requestId, MethodBase methodInfo, Array callArgs)
         {
             if (callArgs == null) return null;
             var callArgsLength = callArgs.Length;
@@ -841,7 +841,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         class RuntimeService
         {
-            public object? Key { get; set; }
+            public object? ServiceKey { get; set; }
             public bool IsKeyed { get; set; }
             public Type ServiceType { get; set; }
             public Type ImplementationType { get; set; }
@@ -864,7 +864,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var ret = await ServiceProvider.FindServiceAsync(serviceType, key);
             if (ret == null)
             {
-                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && Object.Equals(o.Key, key));
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && Object.Equals(o.ServiceKey, key));
                 if (runtimeServiceInfo != null)
                 {
                     if (runtimeServiceInfo.Service == null)
@@ -930,15 +930,230 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 ServiceType = serviceType,
                 ImplementationType = implementationType ?? serviceType,
-                Key = key,
+                ServiceKey = key,
                 IsKeyed = true,
             });
             return true;
         }
-        public override async Task<bool> AddService<TService>(string key)
+        public override async Task<bool> AddKeyedService<TService>(string key)
         {
             var added = await Run(() => _AddService(typeof(TService), typeof(TService), key));
             return added;
+        }
+
+        static object[] DeserializeArray(Array args, Type[] argTypes, int count = -1)
+        {
+            if (args == null) throw new NullReferenceException(nameof(args));
+            if (argTypes == null) throw new NullReferenceException(nameof(argTypes));
+            if (count == -1) count = argTypes.Length;
+            var callArgs = new object[count];
+            for (var i = 0; i < args.Length; i++)
+            {
+                var argType = argTypes[i];
+                callArgs[i] = args.GetItem(argType, i)!;
+            }
+            return callArgs;
+        }
+        protected bool _RemoveService(Type serviceType)
+        {
+            var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && !o.IsKeyed);
+            if (runtimeServiceInfo != null)
+            {
+                RuntimeServices.Remove(runtimeServiceInfo);
+                return true;
+            }
+            return false;
+        }
+        public override async Task<bool> RemoveService(Type serviceType)
+        {
+            if (LocalInvoker)
+            {
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && !o.IsKeyed);
+                if (runtimeServiceInfo != null)
+                {
+                    RuntimeServices.Remove(runtimeServiceInfo);
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                var removed = await Run(() => _RemoveService(serviceType));
+                return removed;
+            }
+        }
+        protected bool _ServiceExists(Type serviceType)
+        {
+            var serviceDescriptor = ServiceDescriptors.FindServiceDescriptor(serviceType, true);
+            if (serviceDescriptor != null) return true;
+            var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && !o.IsKeyed);
+            return runtimeServiceInfo != null;
+        }
+        public override async Task<bool> ServiceExists(Type serviceType)
+        {
+            if (LocalInvoker)
+            {
+                var serviceDescriptor = ServiceDescriptors.FindServiceDescriptor(serviceType, true);
+                if (serviceDescriptor != null) return true;
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && !o.IsKeyed);
+                return runtimeServiceInfo != null;
+            }
+            else
+            {
+                var exists = await Run(() => _ServiceExists(serviceType));
+                return exists;
+            }
+        }
+        protected bool _KeyedServiceExists(Type serviceType, Type? keyType, JSObject? jsKey)
+        {
+            var serviceKey = keyType == null ? null : JS.ReturnMe(keyType, jsKey);
+            var serviceDescriptor = ServiceDescriptors.FindKeyedServiceDescriptor(serviceType, serviceKey!, true);
+            if (serviceDescriptor != null) return true;
+            var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed && Object.Equals(o.ServiceKey, serviceKey));
+            return runtimeServiceInfo != null;
+        }
+        public override async Task<bool> KeyedServiceExists(Type serviceType, object serviceKey)
+        {
+            if (LocalInvoker)
+            {
+                var serviceDescriptor = ServiceDescriptors.FindKeyedServiceDescriptor(serviceType, serviceKey, true);
+                if (serviceDescriptor != null) return true;
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed && Object.Equals(o.ServiceKey, serviceKey));
+                return runtimeServiceInfo != null;
+            }
+            else
+            {
+                using var jsKey = serviceKey == null ? null : JS.ReturnMe<JSObject>(serviceKey);
+                var keyType = serviceKey?.GetType();
+                var exists = await Run(() => _KeyedServiceExists(serviceType, keyType, jsKey));
+                return exists;
+            }
+        }
+        protected bool _RemoveKeyedService(Type serviceType, Type? keyType, JSObject? jsKey)
+        {
+            var serviceKey = keyType == null ? null : JS.ReturnMe(keyType, jsKey);
+            var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed && Object.Equals(o.ServiceKey, serviceKey));
+            if (runtimeServiceInfo != null)
+            {
+                RuntimeServices.Remove(runtimeServiceInfo);
+                return true;
+            }
+            return false;
+        }
+        public override async Task<bool> RemoveKeyedService(Type serviceType, object serviceKey)
+        {
+            if (LocalInvoker)
+            {
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed && Object.Equals(o.ServiceKey, serviceKey));
+                if (runtimeServiceInfo != null)
+                {
+                    RuntimeServices.Remove(runtimeServiceInfo);
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                using var jsKey = serviceKey == null ? null : JS.ReturnMe<JSObject>(serviceKey);
+                var keyType = serviceKey?.GetType();
+                var removed = await Run(() => _RemoveKeyedService(serviceType, keyType, jsKey));
+                return removed;
+            }
+        }
+        protected async Task _Create(Type serviceType, Type? implementationType, Type? keyType, JSObject? jsKey, Array? args, Type[]? argTypes)
+        {
+            var isKeyed = keyType != null;
+            var serviceKey = keyType == null ? null : JS.ReturnMe(keyType, jsKey);
+            var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed == isKeyed && (!isKeyed || Object.Equals(o.ServiceKey, serviceKey)));
+            if (runtimeServiceInfo != null)
+            {
+                throw new Exception("Service already exists");
+            }
+            runtimeServiceInfo = new RuntimeService
+            {
+                ImplementationType = implementationType ?? serviceType,
+                ServiceKey = serviceKey,
+                IsKeyed = isKeyed,
+                ServiceType = serviceType ?? implementationType,
+            };
+            if (argTypes == null || argTypes.Length == 0 || args == null || args.Length == 0)
+            {
+                if (isKeyed)
+                {
+                    try
+                    {
+                        runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, serviceKey!);
+                    }
+                    catch { }
+                }
+                if (runtimeServiceInfo.Service == null)
+                {
+                    runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
+                }
+            }
+            else
+            {
+                var callArgs = DeserializeArray(args, argTypes);
+                runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, callArgs);
+            }
+            RuntimeServices.Add(runtimeServiceInfo);
+        }
+        protected override async Task Create(Type serviceType, Type? implementationType, object? serviceKey, object[]? args, Type[]? argTypes)
+        {
+            if (LocalInvoker)
+            {
+                var isKeyed = serviceKey != null;
+                if (serviceKey != null)
+                {
+                    var serviceDescriptor = ServiceDescriptors.FindKeyedServiceDescriptor(serviceType, serviceKey!, true);
+                    if (serviceDescriptor != null) throw new Exception("Service already exists");
+                }
+                else
+                {
+                    var serviceDescriptor = ServiceDescriptors.FindServiceDescriptor(serviceType, true);
+                    if (serviceDescriptor != null) throw new Exception("Service already exists");
+                }
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed == isKeyed && (!isKeyed || Object.Equals(o.ServiceKey, serviceKey)));
+                if (runtimeServiceInfo != null)
+                {
+                    throw new Exception("Service already exists");
+                }
+                runtimeServiceInfo = new RuntimeService
+                {
+                    ImplementationType = implementationType ?? serviceType,
+                    ServiceKey = serviceKey,
+                    IsKeyed = isKeyed,
+                    ServiceType = serviceType ?? implementationType,
+                };
+                if (argTypes == null || argTypes.Length == 0 || args == null || args.Length == 0)
+                {
+                    if (isKeyed)
+                    {
+                        try
+                        {
+                            runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, serviceKey!);
+                        }
+                        catch { }
+                    }
+                    if (runtimeServiceInfo.Service == null)
+                    {
+                        runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
+                    }
+                }
+                else
+                {
+                    runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, args);
+                }
+                RuntimeServices.Add(runtimeServiceInfo);
+            }
+            else
+            {
+                if (!WhenReady.IsCompleted) await WhenReady;
+                using var argsArray = JS.ReturnMe<Array>(args);
+                using var jsKey = serviceKey == null ? null : JS.ReturnMe<JSObject>(serviceKey);
+                var keyType = serviceKey?.GetType();
+                await Run(() => _Create(serviceType, implementationType, keyType, jsKey, argsArray, argTypes));
+            }
         }
         /// <summary>
         /// Add a service to the remote instance
@@ -948,7 +1163,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="key"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public override async Task<TService> AddService<TService, TImplementation>(string key) where TService : class
+        public override async Task<TService> AddKeyedService<TService, TImplementation>(string key) where TService : class
         {
             if (!typeof(TService).IsInterface) throw new Exception($"{nameof(TService)} must be an interface");
             var added = await Run(() => _AddService(typeof(TService), typeof(TImplementation), key));
@@ -964,7 +1179,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var ret = await ServiceProvider.FindServiceAsync(serviceType);
             if (ret == null)
             {
-                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType);
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && Object.Equals(o.ServiceKey, null));
                 if (runtimeServiceInfo != null)
                 {
                     if (runtimeServiceInfo.Service == null)
