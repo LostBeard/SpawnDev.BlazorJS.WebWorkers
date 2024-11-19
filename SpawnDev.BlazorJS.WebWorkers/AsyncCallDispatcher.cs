@@ -41,10 +41,42 @@ namespace SpawnDev.BlazorJS.WebWorkers
             Console.WriteLine($"SendCall: {(mi == null ? "method NOT FOUND" : "method found")}");
             return Task.FromResult((object)"");
         }
+        /// <summary>
+        /// Add a service at runtime
+        /// </summary>
+        public virtual Task<TService> AddService<TService, TImplementation>() where TService : class
+        {
+            throw new NotImplementedException();
+        }
+        /// <summary>
+        /// Add a service at runtime
+        /// </summary>
+        public virtual Task<TService> AddService<TService, TImplementation>(string key) where TService : class
+        {
+            throw new NotImplementedException();
+        }
+        /// <summary>
+        /// Add a service at runtime
+        /// </summary>
+        public virtual Task<bool> AddService<TService>()
+        {
+            throw new NotImplementedException();
+        }
+        /// <summary>
+        /// Add a service at runtime
+        /// </summary>
+        public virtual Task<bool> AddService<TService>(string key)
+        {
+            throw new NotImplementedException();
+        }
 
         #region DispatchProxy
         Dictionary<Type, object> ServiceInterfaces = new Dictionary<Type, object>();
-
+        /// <summary>
+        /// Returns a service call dispatcher that can call async methods using the returned interface
+        /// </summary>
+        /// <typeparam name="TServiceInterface"></typeparam>
+        /// <returns></returns>
         public TServiceInterface GetService<TServiceInterface>() where TServiceInterface : class
         {
             var typeofT = typeof(TServiceInterface);
@@ -52,6 +84,19 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var ret = InterfaceCallDispatcher<TServiceInterface>.CreateInterfaceDispatcher(Call);
             ServiceInterfaces[typeofT] = ret;
             return ret;
+        }
+        public virtual Task<object?> CallKeyed(object key, MethodInfo methodInfo, object?[]? args = null)
+        {
+            var serializedMethodInfo = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
+            var argsCount = args == null ? 0 : args.Length;
+            Console.WriteLine($"SendCall: {key} {argsCount} {serializedMethodInfo}");
+            var mi = SerializableMethodInfo.DeserializeMethodInfo(serializedMethodInfo);
+            Console.WriteLine($"SendCall: {(mi == null ? "method NOT FOUND" : "method found")}");
+            return Task.FromResult((object)"");
+        }
+        public TServiceInterface GetService<TServiceInterface>(object key) where TServiceInterface : class
+        {
+            return InterfaceCallDispatcher<TServiceInterface>.CreateInterfaceDispatcher(key, CallKeyed);
         }
         #endregion
 
@@ -82,6 +127,58 @@ namespace SpawnDev.BlazorJS.WebWorkers
         #endregion
 
         #region Expressions
+        protected Task<object?> CallKeyed(object key, Expression expr, object?[]? argsExt = null)
+        {
+            if (expr is MethodCallExpression methodCallExpression)
+            {
+                var methodInfo = methodCallExpression.Method;
+                var args = methodCallExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
+                return CallKeyed(key, methodInfo, args);
+            }
+            else if (expr is MemberExpression memberExpression)
+            {
+                if (argsExt == null || argsExt.Length == 0)
+                {
+                    // get call
+                    if (memberExpression.Member is PropertyInfo propertyInfo)
+                    {
+                        var methodInfo = propertyInfo.GetMethod;
+                        if (methodInfo == null)
+                        {
+                            throw new Exception("Property getter does not exist.");
+                        }
+                        return CallKeyed(key, methodInfo);
+                    }
+                    else if (memberExpression.Member is FieldInfo fieldInfo)
+                    {
+                        throw new Exception("Fields are not supported. Properties are supported.");
+                    }
+                    throw new Exception("Property getter does not exist.");
+                }
+                else
+                {
+                    // set call
+                    if (memberExpression.Member is PropertyInfo propertyInfo)
+                    {
+                        var methodInfo = propertyInfo.SetMethod;
+                        if (methodInfo == null)
+                        {
+                            throw new Exception("Property setter does not exist.");
+                        }
+                        return CallKeyed(key, methodInfo, argsExt);
+                    }
+                    else if (memberExpression.Member is FieldInfo fieldInfo)
+                    {
+                        throw new Exception("Fields are not supported. Properties are supported.");
+                    }
+                    throw new Exception("Property setter does not exist.");
+                }
+            }
+            else
+            {
+                throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
+            }
+        }
         /// <summary>
         /// Converts an Expression into a MethodInfo and a call arguments array<br />
         /// Then calls DispatchCall with them
@@ -103,24 +200,38 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 if (argsExt == null || argsExt.Length == 0)
                 {
                     // get call
-                    var propertyInfo = (PropertyInfo)memberExpression.Member;
-                    var methodInfo = propertyInfo.GetMethod;
-                    if (methodInfo == null)
+                    if (memberExpression.Member is PropertyInfo propertyInfo)
                     {
-                        throw new Exception("Property getter does not exist.");
+                        var methodInfo = propertyInfo.GetMethod;
+                        if (methodInfo == null)
+                        {
+                            throw new Exception("Property getter does not exist.");
+                        }
+                        return Call(methodInfo);
                     }
-                    return Call(methodInfo);
+                    else if (memberExpression.Member is FieldInfo fieldInfo)
+                    {
+                        throw new Exception("Fields are not supported. Properties are supported.");
+                    }
+                    throw new Exception("Property getter does not exist.");
                 }
                 else
                 {
                     // set call
-                    var propertyInfo = (PropertyInfo)memberExpression.Member;
-                    var methodInfo = propertyInfo.SetMethod;
-                    if (methodInfo == null)
+                    if (memberExpression.Member is PropertyInfo propertyInfo)
                     {
-                        throw new Exception("Property setter does not exist.");
+                        var methodInfo = propertyInfo.SetMethod;
+                        if (methodInfo == null)
+                        {
+                            throw new Exception("Property setter does not exist.");
+                        }
+                        return Call(methodInfo, argsExt);
                     }
-                    return Call(methodInfo, argsExt);
+                    else if (memberExpression.Member is FieldInfo fieldInfo)
+                    {
+                        throw new Exception("Fields are not supported. Properties are supported.");
+                    }
+                    throw new Exception("Property setter does not exist.");
                 }
             }
             else
@@ -128,6 +239,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
             }
         }
+        #region Non-Keyed
 
         // Static
         // Method Calls and Property Getters
@@ -162,6 +274,43 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await Call(expr.Body);
         // Property set
         public async Task Set<TInstance, TProperty>(Expression<Func<TInstance, TProperty>> expr, TProperty value) => await Call(expr.Body, new object[] { value });
+        #endregion
+        #region Keyed
+
+        // Static
+        // Method Calls and Property Getters
+        // Action
+        public async Task Run(object key, Expression<Action> expr) => await CallKeyed(key, expr.Body);
+        // Func<Task>
+        public async Task Run(object key, Expression<Func<Task>> expr) => await CallKeyed(key, expr.Body);
+        // Func<ValueTask>
+        public async Task Run(object key, Expression<Func<ValueTask>> expr) => await CallKeyed(key, expr.Body);
+        // Func<...,TResult>
+        public async Task<TResult> Run<TResult>(object key, Expression<Func<TResult>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        // Func<...,Task<TResult>>
+        public async Task<TResult> Run<TResult>(object key, Expression<Func<Task<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        // Func<...,ValueTask<TResult>>
+        public async Task<TResult> Run<TResult>(object key, Expression<Func<ValueTask<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        // Property set
+        public async Task Set<TProperty>(object key, Expression<Func<TProperty>> expr, TProperty value) => await CallKeyed(key, expr.Body, new object[] { value });
+
+        // Instance
+        // Method Calls and Property Getters
+        // Action
+        public async Task Run<TInstance>(object key, Expression<Action<TInstance>> expr) => await CallKeyed(key, expr.Body);
+        // Func<Task>
+        public async Task Run<TInstance>(object key, Expression<Func<TInstance, Task>> expr) => await CallKeyed(key, expr.Body);
+        // Func<ValueTask>
+        public async Task Run<TInstance>(object key, Expression<Func<TInstance, ValueTask>> expr) => await CallKeyed(key, expr.Body);
+        // Func<...,TResult>
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, TResult>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        // Func<...,Task<TResult>>
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        // Func<...,ValueTask<TResult>>
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        // Property set
+        public async Task Set<TInstance, TProperty>(object key, Expression<Func<TInstance, TProperty>> expr, TProperty value) => await CallKeyed(key, expr.Body, new object[] { value });
+        #endregion
         #endregion
 
         #region Lock

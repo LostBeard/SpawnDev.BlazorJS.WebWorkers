@@ -83,7 +83,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="SpawnDev.BlazorJS" Version="2.5.19" />
+	  <ProjectReference Include="..\..\..\SpawnDev.BlazorJS\SpawnDev.BlazorJS\SpawnDev.BlazorJS\SpawnDev.BlazorJS.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

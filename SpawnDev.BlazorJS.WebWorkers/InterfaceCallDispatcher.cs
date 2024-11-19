@@ -9,14 +9,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
     public class InterfaceCallDispatcher<TServiceInterface> : DispatchProxy where TServiceInterface : class
     {
         private Func<MethodInfo, object?[]?, object?>? Resolver { get; set; }
-        private Func<object?, MethodInfo, object?[]?, object?>? KeyedResolver { get; set; }
         private Func<MethodInfo, object?[]?, Task<object?>>? AsyncResolver { get; set; }
-        private Func<object?, MethodInfo, object?[]?, Task<object?>>? AsyncKeyedResolver { get; set; }
+        private Func<object, MethodInfo, object?[]?, object?>? KeyedResolver { get; set; }
+        private Func<object, MethodInfo, object?[]?, Task<object?>>? AsyncKeyedResolver { get; set; }
         private object? Key { get; set; }
         private bool Keyed { get; set; }
         private Task<object?> CallAsync(MethodInfo methodInfo, object?[]? args)
         {
-            if (AsyncKeyedResolver != null) return AsyncKeyedResolver(Key, methodInfo, args);
+            if (AsyncKeyedResolver != null) return AsyncKeyedResolver(Key!, methodInfo, args);
             if (AsyncResolver != null) return AsyncResolver(methodInfo, args);
             throw new NullReferenceException("No valid async call resolver found");
         }
@@ -51,7 +51,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="keyedResolver"></param>
         /// <param name="asyncKeyedResolver"></param>
         /// <returns></returns>
-        public static TServiceInterface CreateInterfaceDispatcher(object? key, Func<object?, MethodInfo, object?[]?, Task<object?>> keyedResolver, Func<object?, MethodInfo, object?[]?, Task<object?>>? asyncKeyedResolver = null)
+        public static TServiceInterface CreateInterfaceDispatcher(object key, Func<object?, MethodInfo, object?[]?, Task<object?>> keyedResolver, Func<object?, MethodInfo, object?[]?, Task<object?>>? asyncKeyedResolver = null)
         {
             var ret = Create<TServiceInterface, InterfaceCallDispatcher<TServiceInterface>>();
             var proxy = ret as InterfaceCallDispatcher<TServiceInterface>;
@@ -67,7 +67,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="key"></param>
         /// <param name="asyncKeyedResolver"></param>
         /// <returns></returns>
-        public static TServiceInterface CreateInterfaceDispatcher(object? key, Func<object?, MethodInfo, object?[]?, Task<object?>> asyncKeyedResolver)
+        public static TServiceInterface CreateInterfaceDispatcher(object key, Func<object, MethodInfo, object?[]?, Task<object?>> asyncKeyedResolver)
         {
             var ret = Create<TServiceInterface, InterfaceCallDispatcher<TServiceInterface>>();
             var proxy = ret as InterfaceCallDispatcher<TServiceInterface>;

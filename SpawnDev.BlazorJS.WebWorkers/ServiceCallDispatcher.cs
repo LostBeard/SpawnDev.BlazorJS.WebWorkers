@@ -83,7 +83,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         Dictionary<string, TaskCompletionSource<Array>> _waiting = new Dictionary<string, TaskCompletionSource<Array>>();
         protected IServiceProvider ServiceProvider;
         protected IServiceCollection ServiceDescriptors;
-        IServiceScope? ConnectionScope;
+        //IServiceScope? ConnectionScope;
         /// <summary>
         /// Returns true if a message port is used and it supports transferable objects
         /// </summary>
@@ -248,6 +248,22 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             await HandleCallMessage(args, true);
                         }
                         break;
+                    case "callKeyed":
+                        {
+                            var keyTypeName = args.Shift<string>(); // 1
+                            var keyType = TypeExtensions.GetType(keyTypeName);
+                            var key = args.Shift(keyType!);
+                            await HandleCallMessage(args, false, true, key);
+                        }
+                        break;
+                    case "msgKeyed":
+                        {
+                            var keyTypeName = args.Shift<string>(); // 1
+                            var keyType = TypeExtensions.GetType(keyTypeName);
+                            var key = args.Shift(keyType!);
+                            await HandleCallMessage(args, true, true, key);
+                        }
+                        break;
                 }
             }
             catch (Exception ex)
@@ -258,7 +274,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
         }
 
-        async Task HandleCallMessage(Array args, bool noReply)
+        async Task HandleCallMessage(Array args, bool noReply, bool keyed = false, object? key = null)
         {
             string requestId = "";
             object? retValue = null;
@@ -283,7 +299,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 if (!methodInfo.IsStatic)
                 {
                     // non-static methods calls must point at a registered service
-                    service = await FindServiceAsync(serviceType);
+                    if (keyed)
+                    {
+                        service = await FindServiceAsync(serviceType, key!);
+                    }
+                    else
+                    {
+                        service = await FindServiceAsync(serviceType);
+                    }
                     if (service == null)
                     {
                         throw new Exception($"Service type not found: {(serviceType == null ? "" : serviceType.Name)}");
@@ -364,13 +387,106 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (!methodInfo.IsStatic)
             {
                 // non-static methods calls must point at a registered service
-                service = await FindServiceAsync(methodInfo.ReflectedType);
+                service = await FindServiceAsync(methodInfo.ReflectedType!);
                 if (service == null)
                 {
                     throw new NullReferenceException(nameof(service));
                 }
             }
             return await methodInfo.InvokeAsync(service, args);
+        }
+        private async Task<object?> LocalCall(object key, MethodInfo methodInfo, object?[]? args = null)
+        {
+            if (methodInfo == null)
+            {
+                throw new NullReferenceException(nameof(methodInfo));
+            }
+            object? service = null;
+            if (!methodInfo.IsStatic)
+            {
+                // non-static methods calls must point at a registered service
+                service = await FindServiceAsync(methodInfo.ReflectedType!, key);
+                if (service == null)
+                {
+                    throw new NullReferenceException(nameof(service));
+                }
+            }
+            return await methodInfo.InvokeAsync(service, args);
+        }
+        /// <summary>
+        /// Calls the MethodInfo on remote context
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="methodInfo"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public override async Task<object?> CallKeyed(object key, MethodInfo methodInfo, object?[]? args = null)
+        {
+#if DEBUG && false
+            JS.Log($"Call", methodInfo.Name, LocalInvoker);
+#endif
+            if (LocalInvoker)
+            {
+                return await LocalCall(key, methodInfo, args);
+            }
+            await WhenReady;
+            var serviceType = methodInfo.ReflectedType;
+            if (_portSimple == null)
+            {
+                throw new Exception("ServiceCallDispatcher.Call: port is null.");
+            }
+            if (serviceType == null)
+            {
+                throw new Exception("ServiceCallDispatcher.Call: method does not have a reflected type.");
+            }
+            var originCallableAttribute = methodInfo!.GetCustomAttribute<OriginCallableAttribute>(true);
+            var markedNoReply = originCallableAttribute?.NoReply ?? false;
+            var requestId = Guid.NewGuid().ToString();
+            var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
+            var msgData = PreSerializeArgs(requestId, methodInfo, args, out var transferable);
+            var keyTypeName = key!.GetType().FullName;
+            var msgOut = new List<object?> { markedNoReply ? "msgKeyed" : "callKeyed", keyTypeName, key, requestId, targetMethod };
+            msgOut.AddRange(msgData);
+            if (_port != null) _port.PostMessage(msgOut, transferable);
+            else _portSimple?.PostMessage(msgOut);
+            if (markedNoReply)
+            {
+                CheckBusyStateChanged();
+                return null;
+            }
+            var workerTask = new TaskCompletionSource<Array>();
+            _waiting.Add(requestId, workerTask);
+            CheckBusyStateChanged();
+            try
+            {
+                var returnArray = await workerTask.Task;
+                // remove any request callbacks (currently only Action)
+                var keysToRemove = _actionHandles.Values.Where(o => o.RequestId == requestId).Select(o => o.Id).ToArray();
+                foreach (var keyToRemove in keysToRemove) _actionHandles.Remove(keyToRemove);
+                // get result or exception
+                string? err = returnArray.GetItem<string?>(0);
+                if (!string.IsNullOrEmpty(err)) throw new Exception(err);
+                var finalReturnType = methodInfo.GetFinalReturnType();
+#if DEBUG && false
+                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name);
+#endif
+                if (finalReturnType.IsVoid())
+                {
+#if DEBUG && false
+                    JS.Log($"Call", methodInfo.Name, "return IsVoid");
+#endif
+                    return null;
+                }
+                var ret = returnArray.GetItem(finalReturnType, 1);
+#if DEBUG && false
+                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name, ret);
+#endif
+                return ret;
+            }
+            finally
+            {
+                CheckBusyStateChanged();
+            }
         }
         /// <summary>
         /// Calls the MethodInfo on remote context
@@ -723,6 +839,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             return ret;
         }
+        class RuntimeService
+        {
+            public object? Key { get; set; }
+            public bool IsKeyed { get; set; }
+            public Type ServiceType { get; set; }
+            public Type ImplementationType { get; set; }
+            public object? Service { get; set; }
+        }
+        List<RuntimeService> RuntimeServices = new List<RuntimeService>();
         bool IsCallSideParameter(ParameterInfo methodParam)
         {
             var fromServiceAttr = methodParam.GetCustomAttribute<FromServicesAttribute>();
@@ -730,51 +855,131 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (GetCallSideParameter(methodParam) != null) return true;
             return false;
         }
-
-        /// <summary>
-        /// When a call is dispatched on a service with a Lifetime set to Scoped, what is the actual scope of Scoped:
-        /// - Singleton - Shared by all callers onto this instance. This is how it works when using Scoped services in Blazor WASM apps by default.
-        /// - Scoped - The scope is the Lifetime of this ServiceCallDispatcher. Per connection. Each connection will access its own copy of the service in this worker.
-        /// - Transient - The scope is per call. A new instance of the service is used for each call.
-        /// </summary>
-        public ServiceLifetime ScopedServiceLifetime { get; set; } = ServiceLifetime.Singleton;
-
-        async Task<object?> FindServiceAsync(Type serviceType)
+        async Task<object?> FindServiceAsync(Type serviceType, object key)
         {
-            if (serviceType == null) return null;
-            var info = ServiceDescriptors.FindServiceDescriptors(serviceType)!.FirstOrDefault();
-            if (info == null) return null;
-            switch (info.Lifetime)
+#if DEBUG
+            Console.WriteLine($"{serviceType.Name} {key}");
+#endif
+#if NET8_0_OR_GREATER
+            var ret = await ServiceProvider.FindServiceAsync(serviceType, key);
+            if (ret == null)
             {
-                case ServiceLifetime.Singleton: return await ServiceProvider.GetServiceAsync(info.ServiceType);
-                case ServiceLifetime.Scoped:
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && Object.Equals(o.Key, key));
+                if (runtimeServiceInfo != null)
+                {
+                    if (runtimeServiceInfo.Service == null)
                     {
-                        switch (ScopedServiceLifetime)
+                        // try creating with the key as a parameter, if it fails we'll try without it
+                        try
                         {
-                            case ServiceLifetime.Singleton:
-                                {
-                                    return ServiceProvider.GetService(info.ServiceType);
-                                }
-                            case ServiceLifetime.Scoped:
-                                {
-                                    ConnectionScope ??= ServiceProvider.CreateScope();
-                                    return ConnectionScope!.ServiceProvider.GetService(info.ServiceType);
-                                }
-                            case ServiceLifetime.Transient:
-                                {
-                                    using (var scope = ServiceProvider.CreateScope())
-                                    {
-                                        return scope.ServiceProvider.GetService(info.ServiceType);
-                                    }
-                                }
-                            default: throw new NotSupportedException();
+                            runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, key);
+                        }
+                        catch { }
+                        if (runtimeServiceInfo.Service == null)
+                        {
+                            runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
+                        }
+                        if (runtimeServiceInfo.Service is IAsyncService asyncService)
+                        {
+                            await asyncService.Ready;
                         }
                     }
-                case ServiceLifetime.Transient: return ServiceProvider.GetService(info.ServiceType);
+                    return runtimeServiceInfo.Service;
+                }
             }
-            throw new NotSupportedException();
+            return ret;
+#else
+            return null;
+#endif
         }
-
+        private async Task<bool> _AddService(Type serviceType, Type implementationType)
+        {
+            var service = await FindServiceAsync(serviceType);
+            if (service != null) return false;
+            RuntimeServices.Add(new RuntimeService
+            {
+                ServiceType = serviceType,
+                ImplementationType = implementationType ?? serviceType,
+            });
+            return true;
+        }
+        /// <summary>
+        /// Add a service to the remote instance
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <typeparam name="TImplementation"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public override async Task<TService> AddService<TService, TImplementation>() where TService : class
+        {
+            if (!typeof(TService).IsInterface) throw new Exception($"{nameof(TService)} must be an interface");
+            var added = await Run(() => _AddService(typeof(TService), typeof(TImplementation)));
+            var ret = GetService<TService>();
+            return ret;
+        }
+        public override async Task<bool> AddService<TService>()
+        {
+            var added = await Run(() => _AddService(typeof(TService), typeof(TService)));
+            return added;
+        }
+        private async Task<bool> _AddService(Type serviceType, Type implementationType, string key)
+        {
+            var service = await FindServiceAsync(serviceType, key);
+            if (service != null) return false;
+            RuntimeServices.Add(new RuntimeService
+            {
+                ServiceType = serviceType,
+                ImplementationType = implementationType ?? serviceType,
+                Key = key,
+                IsKeyed = true,
+            });
+            return true;
+        }
+        public override async Task<bool> AddService<TService>(string key)
+        {
+            var added = await Run(() => _AddService(typeof(TService), typeof(TService), key));
+            return added;
+        }
+        /// <summary>
+        /// Add a service to the remote instance
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <typeparam name="TImplementation"></typeparam>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public override async Task<TService> AddService<TService, TImplementation>(string key) where TService : class
+        {
+            if (!typeof(TService).IsInterface) throw new Exception($"{nameof(TService)} must be an interface");
+            var added = await Run(() => _AddService(typeof(TService), typeof(TImplementation), key));
+            var ret = GetService<TService>(key);
+            return ret;
+        }
+        async Task<object?> FindServiceAsync(Type serviceType)
+        {
+            if (serviceType == typeof(ServiceCallDispatcher))
+            {
+                return this;
+            }
+            var ret = await ServiceProvider.FindServiceAsync(serviceType);
+            if (ret == null)
+            {
+                var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType);
+                if (runtimeServiceInfo != null)
+                {
+                    if (runtimeServiceInfo.Service == null)
+                    {
+                        runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
+                        if (runtimeServiceInfo.Service is IAsyncService asyncService)
+                        {
+                            await asyncService.Ready;
+                        }
+                    }
+                    return runtimeServiceInfo.Service;
+                }
+            }
+            return ret;
+        }
         async Task<(bool, object?)> TryResolveCallSideParamValue(ParameterInfo methodParam)
         {
             object? value = null;
@@ -804,11 +1009,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (IsDisposed) return;
             IsDisposed = true;
-            ConnectionScope?.Dispose();
-            if (disposing)
-            {
-
-            }
         }
         public void Dispose()
         {
@@ -824,7 +1024,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public static Action<T0, T1, T2> CreateTypedActionT3<T0, T1, T2>(Action<object?[]> arg) => new Action<T0, T1, T2>((t0, t1, t2) => arg(new object[] { t0, t1 }));
         public static Action<T0, T1, T2, T3> CreateTypedActionT4<T0, T1, T2, T3>(Action<object?[]> arg) => new Action<T0, T1, T2, T3>((t0, t1, t2, t3) => arg(new object[] { t0, t1, t2, t3 }));
         public static Action<T0, T1, T2, T3, T4> CreateTypedActionT5<T0, T1, T2, T3, T4>(Action<object?[]> arg) => new Action<T0, T1, T2, T3, T4>((t0, t1, t2, t3, t4) => arg(new object[] { t0, t1, t2, t3, t4 }));
-        public object CreateTypedAction(Type[] typ1, Action<object?[]> arg)
+        private object CreateTypedAction(Type[] typ1, Action<object?[]> arg)
         {
             var method = typeof(ServiceCallDispatcher).GetMethod($"CreateTypedActionT{typ1.Length}", BindingFlags.Public | BindingFlags.Static);
             var gmeth = method.MakeGenericMethod(typ1);
