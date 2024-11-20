@@ -71,7 +71,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (methodBase is ConstructorInfo constructorInfo)
             {
-                Console.WriteLine($"SerializableMethodInfo ConstructorInfo: {constructorInfo.ReflectedType.Name} {constructorInfo.Name}");
                 var mi = constructorInfo;
                 if (constructorInfo.ReflectedType == null) throw new Exception("Cannot serialize ConstructorInfo without ReflectedType");
                 MethodName = mi.Name;
@@ -84,7 +83,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             else if (methodBase is MethodInfo methodInfo)
             {
-                Console.WriteLine($"SerializableMethodInfo MethodInfo: {methodInfo.ReflectedType.Name} {methodInfo.Name}");
                 var mi = methodInfo;
                 if (methodInfo.ReflectedType == null) throw new Exception("Cannot serialize MethodInfo without ReflectedType");
                 if (methodInfo.IsConstructedGenericMethod)
@@ -105,24 +103,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 throw new Exception($"MethodBase type not supported: {methodBase.GetType().Name}");
             }
         }
-        //public SerializableMethodInfo(Delegate methodDelegate)
-        //{
-        //    var methodInfo = methodDelegate.Method;
-        //    var mi = methodInfo;
-        //    if (methodInfo.ReflectedType == null) throw new Exception("Cannot serialize MethodInfo without ReflectedType");
-        //    if (methodInfo.IsConstructedGenericMethod)
-        //    {
-        //        GenericArguments = methodInfo.GetGenericArguments().Select(o => GetTypeName(o)).ToList();
-        //        mi = methodInfo.GetGenericMethodDefinition();
-        //    }
-        //    MethodName = mi.Name;
-        //    ReflectedTypeName = GetTypeName(methodInfo.ReflectedType);
-        //    DeclaringTypeName = GetTypeName(methodInfo.DeclaringType);
-        //    ReturnType = GetTypeName(mi.ReturnType);
-        //    ParameterTypes = mi.GetParameters().Select(o => GetTypeName(o.ParameterType)).ToList();
-        //    _MethodInfo = methodInfo;
-        //    Resolved = true;
-        //}
         /// <summary>
         /// Deserializes SerializableMethodInfo instance from string using System.Text.Json<br />
         /// PropertyNameCaseInsensitive = true is used in deserialization
@@ -151,7 +131,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (Resolved) return;
             Resolved = true;
-            Console.WriteLine($"Resolve: IsConstructor - {IsConstructor} {ReflectedTypeName} {MethodName}");
             if (IsConstructor)
             {
                 ConstructorInfo? constructorInfo = null;
@@ -238,25 +217,38 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 _MethodInfo = methodInfo;
             }
         }
+        static Dictionary<MethodBase, string> SerializedMethodInfos = new Dictionary<MethodBase, string>();
+        public static bool UseCache { get; set; } = false;
         /// <summary>
         /// Converts a MethodInfo instance into a string
         /// </summary>
-        /// <param name="methodInfo"></param>
-        /// <returns></returns>
-        //public static string SerializeMethodInfo(MethodInfo methodInfo) => new SerializableMethodInfo(methodInfo).ToString();
-        //public static string SerializeMethodInfo(ConstructorInfo constructorInfo) => new SerializableMethodInfo(constructorInfo).ToString();
-        //public static string SerializeMethodInfo(Delegate methodDelegate) => new SerializableMethodInfo(methodDelegate.Method).ToString();
-        public static string SerializeMethodInfo(MethodBase methodBase) => new SerializableMethodInfo(methodBase).ToString();
+        public static string SerializeMethodInfo(MethodBase methodBase)
+        {
+            string info;
+            if (UseCache)
+            {
+                if (SerializedMethodInfos.TryGetValue(methodBase, out info))
+                {
+                    return info;
+                }
+                info = new SerializableMethodInfo(methodBase).ToString();
+                SerializedMethodInfos[methodBase] = info;
+                return info;
+            }
+            info = new SerializableMethodInfo(methodBase).ToString();
+            return info;
+        }
         /// <summary>
         /// Converts a MethodInfo that has been serialized using SerializeMethodInfo into a MethodInfo if serialization is successful or a null otherwise.
         /// </summary>
-        /// <param name="serializableMethodInfoJson"></param>
-        /// <returns></returns>
         public static MethodInfo? DeserializeMethodInfo(string serializableMethodInfoJson)
         {
             var tmp = FromString(serializableMethodInfoJson);
             return tmp == null ? null : tmp.MethodInfo;
         }
+        /// <summary>
+        /// Converts a MethodInfo that has been serialized using SerializeMethodInfo into a ConstructorInfo if serialization is successful or a null otherwise.
+        /// </summary>
         public static ConstructorInfo? DeserializeConstructorInfoInfo(string serializableMethodInfoJson)
         {
             var tmp = FromString(serializableMethodInfoJson);
