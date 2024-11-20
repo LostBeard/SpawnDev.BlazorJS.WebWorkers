@@ -19,6 +19,18 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
         }
         private MethodInfo? _MethodInfo = null;
+
+        [JsonIgnore]
+        public ConstructorInfo? ConstructorInfo
+        {
+            get
+            {
+                if (!Resolved) Resolve();
+                return _ConstructorInfo;
+            }
+        }
+        private ConstructorInfo? _ConstructorInfo = null;
+
         private bool Resolved = false;
         /// <summary>
         /// MethodInfo.ReflectedType type name
@@ -28,6 +40,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// MethodInfo.DeclaringType type name
         /// </summary>
         public string DeclaringTypeName { get; init; } = "";
+        /// <summary>
+        /// Returns true if the 
+        /// </summary>
+        public bool IsConstructor => MethodName == ".ctor";
         /// <summary>
         /// MethodInfo.Name
         /// </summary>
@@ -49,45 +65,61 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         public SerializableMethodInfo() { }
         /// <summary>
-        /// Creates a new instance of SerializableMethodInfo that represents
+        /// Creates a new instance of SerializableMethodInfo that represents the passed in MethodBase
         /// </summary>
-        /// <param name="methodInfo"></param>
-        /// <exception cref="Exception"></exception>
-        public SerializableMethodInfo(MethodInfo methodInfo)
+        public SerializableMethodInfo(MethodBase methodBase)
         {
-            var mi = methodInfo;
-            if (methodInfo.ReflectedType == null) throw new Exception("Cannot serialize MethodInfo without ReflectedType");
-            if (methodInfo.IsConstructedGenericMethod)
+            if (methodBase is ConstructorInfo constructorInfo)
             {
-                GenericArguments = methodInfo.GetGenericArguments().Select(o => GetTypeName(o)).ToList();
-                mi = methodInfo.GetGenericMethodDefinition();
+                var mi = constructorInfo;
+                if (constructorInfo.ReflectedType == null) throw new Exception("Cannot serialize ConstructorInfo without ReflectedType");
+                ReflectedTypeName = GetTypeName(constructorInfo.ReflectedType);
+                DeclaringTypeName = GetTypeName(constructorInfo.DeclaringType);
+                ReturnType = GetTypeName(typeof(void));
+                ParameterTypes = mi.GetParameters().Select(o => GetTypeName(o.ParameterType)).ToList();
+                _ConstructorInfo = constructorInfo;
+                Resolved = true;
             }
-            MethodName = mi.Name;
-            ReflectedTypeName = GetTypeName(methodInfo.ReflectedType);
-            DeclaringTypeName = GetTypeName(methodInfo.DeclaringType);
-            ReturnType = GetTypeName(mi.ReturnType);
-            ParameterTypes = mi.GetParameters().Select(o => GetTypeName(o.ParameterType)).ToList();
-            _MethodInfo = methodInfo;
-            Resolved = true;
-        }
-        public SerializableMethodInfo(Delegate methodDelegate)
-        {
-            var methodInfo = methodDelegate.Method;
-            var mi = methodInfo;
-            if (methodInfo.ReflectedType == null) throw new Exception("Cannot serialize MethodInfo without ReflectedType");
-            if (methodInfo.IsConstructedGenericMethod)
+            else if (methodBase is MethodInfo methodInfo)
             {
-                GenericArguments = methodInfo.GetGenericArguments().Select(o => GetTypeName(o)).ToList();
-                mi = methodInfo.GetGenericMethodDefinition();
+                var mi = methodInfo;
+                if (methodInfo.ReflectedType == null) throw new Exception("Cannot serialize MethodInfo without ReflectedType");
+                if (methodInfo.IsConstructedGenericMethod)
+                {
+                    GenericArguments = methodInfo.GetGenericArguments().Select(o => GetTypeName(o)).ToList();
+                    mi = methodInfo.GetGenericMethodDefinition();
+                }
+                MethodName = mi.Name;
+                ReflectedTypeName = GetTypeName(methodInfo.ReflectedType);
+                DeclaringTypeName = GetTypeName(methodInfo.DeclaringType);
+                ReturnType = GetTypeName(mi.ReturnType);
+                ParameterTypes = mi.GetParameters().Select(o => GetTypeName(o.ParameterType)).ToList();
+                _MethodInfo = methodInfo;
+                Resolved = true;
             }
-            MethodName = mi.Name;
-            ReflectedTypeName = GetTypeName(methodInfo.ReflectedType);
-            DeclaringTypeName = GetTypeName(methodInfo.DeclaringType);
-            ReturnType = GetTypeName(mi.ReturnType);
-            ParameterTypes = mi.GetParameters().Select(o => GetTypeName(o.ParameterType)).ToList();
-            _MethodInfo = methodInfo;
-            Resolved = true;
+            else
+            {
+                throw new Exception($"MethodBase type not supported: {methodBase.GetType().Name}");
+            }
         }
+        //public SerializableMethodInfo(Delegate methodDelegate)
+        //{
+        //    var methodInfo = methodDelegate.Method;
+        //    var mi = methodInfo;
+        //    if (methodInfo.ReflectedType == null) throw new Exception("Cannot serialize MethodInfo without ReflectedType");
+        //    if (methodInfo.IsConstructedGenericMethod)
+        //    {
+        //        GenericArguments = methodInfo.GetGenericArguments().Select(o => GetTypeName(o)).ToList();
+        //        mi = methodInfo.GetGenericMethodDefinition();
+        //    }
+        //    MethodName = mi.Name;
+        //    ReflectedTypeName = GetTypeName(methodInfo.ReflectedType);
+        //    DeclaringTypeName = GetTypeName(methodInfo.DeclaringType);
+        //    ReturnType = GetTypeName(mi.ReturnType);
+        //    ParameterTypes = mi.GetParameters().Select(o => GetTypeName(o.ParameterType)).ToList();
+        //    _MethodInfo = methodInfo;
+        //    Resolved = true;
+        //}
         /// <summary>
         /// Deserializes SerializableMethodInfo instance from string using System.Text.Json<br />
         /// PropertyNameCaseInsensitive = true is used in deserialization
@@ -112,66 +144,95 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (type == null) return "";
             return !string.IsNullOrEmpty(type.AssemblyQualifiedName) ? type.AssemblyQualifiedName : (!string.IsNullOrEmpty(type.FullName) ? type.FullName : type.Name);
         }
-
         void Resolve()
         {
-            MethodInfo? methodInfo = null;
             if (Resolved) return;
             Resolved = true;
-            methodInfo = null;
-            var reflectedType = TypeExtensions.GetType(ReflectedTypeName);
-            if (reflectedType == null)
+            if (IsConstructor)
             {
-                // Reflected type not found
-                return;
-            }
-            var methodsWithName = reflectedType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static).Where(o => o.Name == MethodName);
-            if (!methodsWithName.Any())
-            {
-                // No method found with this MethodName found in ReflectedType
-                return;
-            }
-            MethodInfo? mi = null;
-            foreach (var method in methodsWithName)
-            {
-                var msi = new SerializableMethodInfo(method);
-                if (msi.ReturnType == ReturnType && msi.ParameterTypes.SequenceEqual(ParameterTypes))
+                ConstructorInfo? constructorInfo = null;
+                var reflectedType = TypeExtensions.GetType(ReflectedTypeName);
+                if (reflectedType == null)
                 {
-                    mi = method;
-                    break;
-                }
-            }
-            if (mi == null)
-            {
-                // No method found that matches the base method signature
-                return;
-            }
-            if (mi.IsGenericMethod)
-            {
-                if (GenericArguments == null || !GenericArguments.Any())
-                {
-                    // Generics information in GenericArguments is missing. Resolve not possible.
+                    // Reflected type not found
                     return;
                 }
-                var genericTypes = new Type[GenericArguments.Count];
-                for (var i = 0; i < genericTypes.Length; i++)
+                var parameterTypesDeserialized = ParameterTypes.Select(o => TypeExtensions.GetType(o)).ToList();
+                var constructors = reflectedType.GetConstructors();
+                foreach (var ctor in constructors)
                 {
-                    var gTypeName = GenericArguments[i];
-                    var gType = TypeExtensions.GetType(gTypeName);
-                    if (gType == null)
+                    var parameterInfos = ctor.GetParameters();
+                    if (parameterTypesDeserialized.Count != parameterInfos.Length) continue;
+                    for (var i = 0; i < parameterInfos.Length; i++)
                     {
-                        // One of the generic types needed to make the generic method was not found
-                        return;
+                        var parameterType = parameterInfos[i].ParameterType;
+                        if (parameterTypesDeserialized[i] != parameterType)
+                        {
+                            continue;
+                        }
                     }
-                    genericTypes[i] = gType;
+                    constructorInfo = ctor;
+                    break;
                 }
-                methodInfo = mi.MakeGenericMethod(genericTypes);
+                _ConstructorInfo = constructorInfo;
             }
             else
             {
-                methodInfo = mi;
+                MethodInfo? methodInfo = null;
+                var reflectedType = TypeExtensions.GetType(ReflectedTypeName);
+                if (reflectedType == null)
+                {
+                    // Reflected type not found
+                    return;
+                }
+                var methodsWithName = reflectedType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static).Where(o => o.Name == MethodName);
+                if (!methodsWithName.Any())
+                {
+                    // No method found with this MethodName found in ReflectedType
+                    return;
+                }
+                MethodInfo? mi = null;
+                foreach (var method in methodsWithName)
+                {
+                    var msi = new SerializableMethodInfo(method);
+                    if (msi.ReturnType == ReturnType && msi.ParameterTypes.SequenceEqual(ParameterTypes))
+                    {
+                        mi = method;
+                        break;
+                    }
+                }
+                if (mi == null)
+                {
+                    // No method found that matches the base method signature
+                    return;
+                }
+                if (mi.IsGenericMethod)
+                {
+                    if (GenericArguments == null || !GenericArguments.Any())
+                    {
+                        // Generics information in GenericArguments is missing. Resolve not possible.
+                        return;
+                    }
+                    var genericTypes = new Type[GenericArguments.Count];
+                    for (var i = 0; i < genericTypes.Length; i++)
+                    {
+                        var gTypeName = GenericArguments[i];
+                        var gType = TypeExtensions.GetType(gTypeName);
+                        if (gType == null)
+                        {
+                            // One of the generic types needed to make the generic method was not found
+                            return;
+                        }
+                        genericTypes[i] = gType;
+                    }
+                    methodInfo = mi.MakeGenericMethod(genericTypes);
+                }
+                else
+                {
+                    methodInfo = mi;
+                }
+                _MethodInfo = methodInfo;
             }
-            _MethodInfo = methodInfo;
         }
         /// <summary>
         /// Converts a MethodInfo instance into a string
@@ -179,7 +240,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="methodInfo"></param>
         /// <returns></returns>
         public static string SerializeMethodInfo(MethodInfo methodInfo) => new SerializableMethodInfo(methodInfo).ToString();
-        public static string SerializeMethodInfo(Delegate methodDeleate) => new SerializableMethodInfo(methodDeleate.Method).ToString();
+        public static string SerializeMethodInfo(ConstructorInfo constructorInfo) => new SerializableMethodInfo(constructorInfo).ToString();
+        public static string SerializeMethodInfo(Delegate methodDelegate) => new SerializableMethodInfo(methodDelegate.Method).ToString();
+        public static string SerializeMethodInfo(MethodBase methodBase) => new SerializableMethodInfo(methodBase).ToString();
         /// <summary>
         /// Converts a MethodInfo that has been serialized using SerializeMethodInfo into a MethodInfo if serialization is successful or a null otherwise.
         /// </summary>

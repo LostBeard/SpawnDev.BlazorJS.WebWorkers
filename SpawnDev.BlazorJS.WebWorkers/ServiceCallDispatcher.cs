@@ -377,23 +377,45 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (data != null) outMsg.AddRange(data);
             _portSimple?.PostMessage(outMsg);
         }
-        private async Task<object?> LocalCall(MethodInfo methodInfo, object?[]? args = null)
+        private async Task<object?> LocalCall(MethodBase methodBase, object?[]? args = null)
         {
-            if (methodInfo == null)
+            if (methodBase == null)
             {
-                throw new NullReferenceException(nameof(methodInfo));
+                throw new NullReferenceException(nameof(methodBase));
             }
-            object? service = null;
-            if (!methodInfo.IsStatic)
+            if (methodBase is MethodInfo methodInfo)
             {
-                // non-static methods calls must point at a registered service
-                service = await FindServiceAsync(methodInfo.ReflectedType!);
-                if (service == null)
+                object? service = null;
+                if (!methodBase.IsStatic)
                 {
-                    throw new NullReferenceException(nameof(service));
+                    // non-static methods calls must point at a registered service
+                    service = await FindServiceAsync(methodBase.ReflectedType!);
+                    if (service == null)
+                    {
+                        throw new NullReferenceException(nameof(service));
+                    }
                 }
+                return await methodInfo.InvokeAsync(service, args);
             }
-            return await methodInfo.InvokeAsync(service, args);
+            else if (methodBase is ConstructorInfo constructorInfo)
+            {
+                throw new NotSupportedException();
+                //object? service = null;
+                //if (!methodBase.IsStatic)
+                //{
+                //    // non-static methods calls must point at a registered service
+                //    service = await FindServiceAsync(methodBase.ReflectedType!);
+                //    if (service == null)
+                //    {
+                //        throw new NullReferenceException(nameof(service));
+                //    }
+                //}
+                //return constructorInfo.Invoke(args);
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
         }
         private async Task<object?> LocalCall(object key, MethodInfo methodInfo, object?[]? args = null)
         {
@@ -488,23 +510,91 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 CheckBusyStateChanged();
             }
         }
+        //        protected override async Task Create(ConstructorInfo methodBase, Type? serviceType, object?[]? args = null)
+        //        {
+        //#if DEBUG && false
+        //            JS.Log($"Call", methodInfo.Name, LocalInvoker);
+        //#endif
+        //            if (LocalInvoker)
+        //            {
+        //                return await LocalCall(methodBase, args);
+        //            }
+        //            await WhenReady;
+        //            var serviceType = methodBase.ReflectedType;
+        //            if (_portSimple == null)
+        //            {
+        //                throw new Exception("ServiceCallDispatcher.Call: port is null.");
+        //            }
+        //            if (serviceType == null)
+        //            {
+        //                throw new Exception("ServiceCallDispatcher.Call: method does not have a reflected type.");
+        //            }
+
+        //            var originCallableAttribute = methodBase!.GetCustomAttribute<OriginCallableAttribute>(true);
+        //            var markedNoReply = originCallableAttribute?.NoReply ?? false;
+        //            var requestId = Guid.NewGuid().ToString();
+        //            var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodBase);
+        //            var msgData = PreSerializeArgs(requestId, methodBase, args, out var transferable);
+        //            var msgOut = new List<object?> { markedNoReply ? "msg" : "call", requestId, targetMethod };
+        //            msgOut.AddRange(msgData);
+        //            if (_port != null) _port.PostMessage(msgOut, transferable);
+        //            else _portSimple?.PostMessage(msgOut);
+        //            if (markedNoReply)
+        //            {
+        //                CheckBusyStateChanged();
+        //                return null;
+        //            }
+        //            var workerTask = new TaskCompletionSource<Array>();
+        //            _waiting.Add(requestId, workerTask);
+        //            CheckBusyStateChanged();
+        //            try
+        //            {
+        //                var returnArray = await workerTask.Task;
+        //                // remove any request callbacks (currently only Action)
+        //                var keysToRemove = _actionHandles.Values.Where(o => o.RequestId == requestId).Select(o => o.Id).ToArray();
+        //                foreach (var key in keysToRemove) _actionHandles.Remove(key);
+        //                // get result or exception
+        //                string? err = returnArray.GetItem<string?>(0);
+        //                if (!string.IsNullOrEmpty(err)) throw new Exception(err);
+        //                var finalReturnType = methodBase is MethodInfo methodInfo ? methodInfo.GetFinalReturnType() : typeof(void);
+        //#if DEBUG && false
+        //                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name);
+        //#endif
+        //                if (finalReturnType.IsVoid())
+        //                {
+        //#if DEBUG && false
+        //                    JS.Log($"Call", methodInfo.Name, "return IsVoid");
+        //#endif
+        //                    return null;
+        //                }
+        //                var ret = returnArray.GetItem(finalReturnType, 1);
+        //#if DEBUG && false
+        //                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name, ret);
+        //#endif
+        //                return ret;
+        //            }
+        //            finally
+        //            {
+        //                CheckBusyStateChanged();
+        //            }
+        //        }
         /// <summary>
         /// Calls the MethodInfo on remote context
         /// </summary>
-        /// <param name="methodInfo"></param>
+        /// <param name="methodBase"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public override async Task<object?> Call(MethodInfo methodInfo, object?[]? args = null)
+        public override async Task<object?> Call(MethodInfo methodBase, object?[]? args = null)
         {
 #if DEBUG && false
             JS.Log($"Call", methodInfo.Name, LocalInvoker);
 #endif
             if (LocalInvoker)
             {
-                return await LocalCall(methodInfo, args);
+                return await LocalCall(methodBase, args);
             }
             await WhenReady;
-            var serviceType = methodInfo.ReflectedType;
+            var serviceType = methodBase.ReflectedType;
             if (_portSimple == null)
             {
                 throw new Exception("ServiceCallDispatcher.Call: port is null.");
@@ -513,12 +603,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 throw new Exception("ServiceCallDispatcher.Call: method does not have a reflected type.");
             }
-
-            var originCallableAttribute = methodInfo!.GetCustomAttribute<OriginCallableAttribute>(true);
+            var originCallableAttribute = methodBase!.GetCustomAttribute<OriginCallableAttribute>(true);
             var markedNoReply = originCallableAttribute?.NoReply ?? false;
             var requestId = Guid.NewGuid().ToString();
-            var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
-            var msgData = PreSerializeArgs(requestId, methodInfo, args, out var transferable);
+            var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodBase);
+            var msgData = PreSerializeArgs(requestId, methodBase, args, out var transferable);
             var msgOut = new List<object?> { markedNoReply ? "msg" : "call", requestId, targetMethod };
             msgOut.AddRange(msgData);
             if (_port != null) _port.PostMessage(msgOut, transferable);
@@ -540,7 +629,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 // get result or exception
                 string? err = returnArray.GetItem<string?>(0);
                 if (!string.IsNullOrEmpty(err)) throw new Exception(err);
-                var finalReturnType = methodInfo.GetFinalReturnType();
+                var finalReturnType = methodBase is MethodInfo methodInfo ? methodInfo.GetFinalReturnType() : typeof(void);
 #if DEBUG && false
                 JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name);
 #endif
@@ -624,15 +713,17 @@ namespace SpawnDev.BlazorJS.WebWorkers
         private object?[] PreSerializeArgs(string requestId, MethodBase methodInfo, object?[]? args, out object[] transferable)
         {
             var transferableList = new List<object>();
-            var methodsParamTypes = methodInfo.GetParameters();
+            var parameterInfos = methodInfo.GetParameters();
+            var transferableListAttributeParameter = parameterInfos.FirstOrDefault(o => typeof(IEnumerable<object>).IsAssignableFrom(o.ParameterType) && Attribute.IsDefined(o, typeof(TransferableListAttribute)));
+            var transferableListAttributeFound = transferableListAttributeParameter != null;
             var argsLength = args == null ? 0 : args.Length;
             object?[]? ret = new object?[argsLength];
             for (var i = 0; i < argsLength; i++)
             {
                 var arg = args![i];
                 if (arg == null) continue;
-                var methodParam = methodsParamTypes[i];
-                var methodParamType = methodParam.ParameterType;
+                var methodParamInfo = parameterInfos[i];
+                var methodParamType = methodParamInfo.ParameterType;
                 Type? genericType = null;
                 if (methodParamType.IsGenericTypeDefinition) genericType = methodParamType;
                 else if (methodParamType.IsGenericType) genericType = methodParamType.GetGenericTypeDefinition();
@@ -641,24 +732,32 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 Console.WriteLine($"genericTypeStr: {genericTypeStr}");
 #endif
                 var coreType = genericType ?? methodParamType;
-                //var methodParamTypeIsTransferable = IsTransferable(methodParamType);
-                var allowTransferable = false;
+                var workerTransferSet = false;
+                var isTransferList = Attribute.IsDefined(methodParamInfo, typeof(TransferableListAttribute));
                 if (methodParamType.IsClass)
                 {
-                    var transferAttr = (WorkerTransferAttribute?)methodParam.GetCustomAttribute(typeof(WorkerTransferAttribute), true);
+                    var transferAttr = (WorkerTransferAttribute?)methodParamInfo.GetCustomAttribute(typeof(WorkerTransferAttribute), true);
                     if (transferAttr?.Transfer == true)
                     {
                         // this property has been marked as transferable
-                        allowTransferable = true;
+                        workerTransferSet = true;
                     }
                 }
-                var methodParamTypeName = methodParam.ParameterType.Name;
+                var methodParamTypeName = methodParamInfo.ParameterType.Name;
                 var genericTypes = methodParamType.GenericTypeArguments;
-                if (IsCallSideParameter(methodParam))
+                // check if it is a [TransferableList] object[] parameter
+                if (transferableListAttributeParameter == methodParamInfo && arg is IEnumerable<object> objectArray)
+                {
+                    transferableList.AddRange(objectArray);
+                    // the parameter data is not actually passed, the parameter exists to tell the sender what data should be added to the transferables list
+                    ret[i] = null;
+                    continue;
+                }
+                if (IsCallSideParameter(methodParamInfo))
                 {
                     // resolved on the other side
                 }
-                else if (arg is Delegate argDelegate)
+                else if (arg is Delegate argDelegate && !string.IsNullOrEmpty(requestId))
                 {
                     if (IsAction(coreType))
                     {
@@ -722,15 +821,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         if (transferableAttribute != null)
                         {
                             // some transferable types MUST be transferred to be sent to a worker (Ex. OffscreenCanvas)
-                            if (allowTransferable || transferableAttribute.TransferRequired)
+                            // if 
+                            if (workerTransferSet || (transferableAttribute.TransferRequired && !transferableListAttributeFound))
                             {
-
                                 transferableList.Add(arg);
                                 ret[i] = arg;
                                 continue;
                             }
                         }
-                        else if (allowTransferable && arg is TypedArray typedArray)
+                        else if (workerTransferSet && arg is TypedArray typedArray)
                         {
                             var arrayBuffer = typedArray.Buffer;
                             transferableList.Add(arrayBuffer);
@@ -738,7 +837,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             continue;
                         }
                     }
-                    if (allowTransferable)
+                    if (workerTransferSet)
                     {
                         var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(methodParamType);
                         var propTransferable = conversionInfo.GetTransferablePropertyValues(arg);
@@ -800,7 +899,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     ret[i] = value;
                 }
-                else if (typeof(CancellationToken) == methodParamType)
+                else if (typeof(CancellationToken) == methodParamType && !string.IsNullOrEmpty(requestId))
                 {
                     // Create a local action that can be called to relay the call to the remote endpoint
                     var tokenId = callArgs.GetItem<string?>(i);
@@ -822,7 +921,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         ret[i] = remoteCancellationToken.TokenSource.Token;
                     }
                 }
-                else if (typeof(Delegate).IsAssignableFrom(methodParamType))
+                else if (typeof(Delegate).IsAssignableFrom(methodParamType) && !string.IsNullOrEmpty(requestId))
                 {
                     // Create a local action that can be called to relay the call to the remote endpoint
                     var actionId = callArgs.GetItem<string>(i);
@@ -1076,8 +1175,48 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 return removed;
             }
         }
-        protected async Task _Create(Type serviceType, Type? implementationType, Type? keyType, JSObject? jsKey, Array? args, Type[]? argTypes)
+        //protected async Task _Create(Type serviceType, Type? implementationType, Type? keyType, JSObject? jsKey, Array? args, Type[]? argTypes)
+        //{
+        //    var isKeyed = keyType != null;
+        //    var serviceKey = keyType == null ? null : JS.ReturnMe(keyType, jsKey);
+        //    var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed == isKeyed && (!isKeyed || Object.Equals(o.ServiceKey, serviceKey)));
+        //    if (runtimeServiceInfo != null)
+        //    {
+        //        throw new Exception("Service already exists");
+        //    }
+        //    runtimeServiceInfo = new RuntimeService
+        //    {
+        //        ImplementationType = implementationType ?? serviceType,
+        //        ServiceKey = serviceKey,
+        //        IsKeyed = isKeyed,
+        //        ServiceType = serviceType ?? implementationType,
+        //    };
+        //    if (argTypes == null || argTypes.Length == 0 || args == null || args.Length == 0)
+        //    {
+        //        if (isKeyed)
+        //        {
+        //            try
+        //            {
+        //                runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, serviceKey!);
+        //            }
+        //            catch { }
+        //        }
+        //        if (runtimeServiceInfo.Service == null)
+        //        {
+        //            runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        var callArgs = DeserializeArray(args, argTypes);
+        //        runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, callArgs);
+        //    }
+        //    RuntimeServices.Add(runtimeServiceInfo);
+        //}
+
+        protected async Task _CreateKeyed(string constructorInfoJson, Type serviceType, Type? implementationType, Type? keyType, JSObject? jsKey, Array? args, Type[]? argTypes, [TransferableList] object[]? transferables)
         {
+            var constructorInfo = SerializableMethodInfo.DeserializeMethodInfo(constructorInfoJson);
             var isKeyed = keyType != null;
             var serviceKey = keyType == null ? null : JS.ReturnMe(keyType, jsKey);
             var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed == isKeyed && (!isKeyed || Object.Equals(o.ServiceKey, serviceKey)));
@@ -1109,13 +1248,23 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             else
             {
-                var callArgs = DeserializeArray(args, argTypes);
-                runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, callArgs);
+                if (constructorInfo != null)
+                {
+                    var callArgs = await PostDeserializeArgs(null, constructorInfo, args);
+                    runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, callArgs);
+                }
+                else
+                {
+                    var callArgs = DeserializeArray(args, argTypes);
+                    runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, callArgs);
+                }
             }
             RuntimeServices.Add(runtimeServiceInfo);
         }
-        protected override async Task Create(Type serviceType, Type? implementationType, object? serviceKey, object[]? args, Type[]? argTypes)
+        protected override async Task CreateKeyed(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
         {
+            var implementationType = constructorInfo.ReflectedType;
+            var argTypes = constructorInfo.GetParameters().Select(o => o.ParameterType).ToArray();
             if (LocalInvoker)
             {
                 var isKeyed = serviceKey != null;
@@ -1165,12 +1314,71 @@ namespace SpawnDev.BlazorJS.WebWorkers
             else
             {
                 if (!WhenReady.IsCompleted) await WhenReady;
-                using var argsArray = JS.ReturnMe<Array>(args);
+                var preparedArgs = PreSerializeArgs(null, constructorInfo, args, out var transferables);
+                using var argsArray = JS.ReturnMe<Array>(preparedArgs);
                 using var jsKey = serviceKey == null ? null : JS.ReturnMe<JSObject>(serviceKey);
                 var keyType = serviceKey?.GetType();
-                await Run(() => _Create(serviceType, implementationType, keyType, jsKey, argsArray, argTypes));
+                var constructorInfoJson = SerializableMethodInfo.SerializeMethodInfo(constructorInfo);
+                await Run(() => _CreateKeyed(constructorInfoJson, serviceType, implementationType, keyType, jsKey, argsArray, argTypes, transferables));
             }
         }
+        //protected override async Task CreateKeyed(Type serviceType, Type? implementationType, object? serviceKey, object[]? args, Type[]? argTypes)
+        //{
+        //    if (LocalInvoker)
+        //    {
+        //        var isKeyed = serviceKey != null;
+        //        if (serviceKey != null)
+        //        {
+        //            var serviceDescriptor = ServiceDescriptors.FindKeyedServiceDescriptor(serviceType, serviceKey!, true);
+        //            if (serviceDescriptor != null) throw new Exception("Service already exists");
+        //        }
+        //        else
+        //        {
+        //            var serviceDescriptor = ServiceDescriptors.FindServiceDescriptor(serviceType, true);
+        //            if (serviceDescriptor != null) throw new Exception("Service already exists");
+        //        }
+        //        var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed == isKeyed && (!isKeyed || Object.Equals(o.ServiceKey, serviceKey)));
+        //        if (runtimeServiceInfo != null)
+        //        {
+        //            throw new Exception("Service already exists");
+        //        }
+        //        runtimeServiceInfo = new RuntimeService
+        //        {
+        //            ImplementationType = implementationType ?? serviceType,
+        //            ServiceKey = serviceKey,
+        //            IsKeyed = isKeyed,
+        //            ServiceType = serviceType ?? implementationType,
+        //        };
+        //        if (argTypes == null || argTypes.Length == 0 || args == null || args.Length == 0)
+        //        {
+        //            if (isKeyed)
+        //            {
+        //                try
+        //                {
+        //                    runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, serviceKey!);
+        //                }
+        //                catch { }
+        //            }
+        //            if (runtimeServiceInfo.Service == null)
+        //            {
+        //                runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            runtimeServiceInfo.Service = ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, args);
+        //        }
+        //        RuntimeServices.Add(runtimeServiceInfo);
+        //    }
+        //    else
+        //    {
+        //        if (!WhenReady.IsCompleted) await WhenReady;
+        //        using var argsArray = JS.ReturnMe<Array>(args);
+        //        using var jsKey = serviceKey == null ? null : JS.ReturnMe<JSObject>(serviceKey);
+        //        var keyType = serviceKey?.GetType();
+        //        await Run(() => _Create(serviceType, implementationType, keyType, jsKey, argsArray, argTypes));
+        //    }
+        //}
         /// <summary>
         /// Add a service to the remote instance
         /// </summary>

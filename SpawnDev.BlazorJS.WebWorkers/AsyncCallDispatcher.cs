@@ -40,14 +40,47 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var mi = SerializableMethodInfo.DeserializeMethodInfo(serializedMethodInfo);
             Console.WriteLine($"SendCall: {(mi == null ? "method NOT FOUND" : "method found")}");
             return Task.FromResult((object)"");
+        }        
+        protected virtual Task Create(ConstructorInfo constructorInfo, Type? serviceType, object[]? args)
+        {
+            return CreateKeyed(constructorInfo, serviceType, null, args);
+            //throw new NotImplementedException();
+            //if (constructorInfo?.ReflectedType == null) throw new ArgumentNullException(nameof(constructorInfo));
+            //var implementationType = constructorInfo.ReflectedType;
+            //serviceType ??= implementationType;
+            //var argsTypes = constructorInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+            //return Create(serviceType, implementationType, args, argsTypes);
+        }
+        protected virtual Task CreateKeyed(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
+        {
+            throw new NotImplementedException();
+            //if (constructorInfo?.ReflectedType == null) throw new ArgumentNullException(nameof(constructorInfo));
+            //var implementationType = constructorInfo.ReflectedType;
+            //serviceType ??= implementationType;
+            //var argsTypes = constructorInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+            //return CreateKeyed(serviceType, implementationType, serviceKey, args, argsTypes);
         }
         /// <summary>
         /// Creates a new instance of the given type using the specified arguments
         /// </summary>
-        protected virtual Task Create(Type serviceType, Type? implementationType, object? key, object[]? args, Type[]? argTypes)
-        {
-            throw new NotImplementedException();
-        }
+        //protected virtual Task Create(Type serviceType, Type? implementationType, object[]? args, Type[]? argTypes)
+        //{
+        //    return CreateKeyed(serviceType, implementationType, default!, args, argTypes);
+        //}
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="implementationType"></param>
+        /// <param name="key">If null, a non-keyed service will be created</param>
+        /// <param name="args"></param>
+        /// <param name="argTypes"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        //protected virtual Task CreateKeyed(Type serviceType, Type? implementationType, object? key, object[]? args, Type[]? argTypes)
+        //{
+        //    throw new NotImplementedException();
+        //}
         public Task<bool> RemoveService<TService>() => RemoveService(typeof(TService));
         public Task<bool> RemoveKeyedService<TService>(object key) => RemoveKeyedService(typeof(TService), key);
         public virtual Task<bool> RemoveService(Type serviceType)
@@ -68,42 +101,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             throw new NotImplementedException();
         }
-        //public Task CreateInstance(Type serviceType, params object?[]? args)
-        //{
-        //    return Create(serviceType, null, args);
-        //}
-        //public Task CreateInstance(Type serviceType, Type implementationType, params object?[]? args)
-        //{
-        //    return Create(serviceType, implementationType, args);
-        //}
-        //public Task CreateKeyedInstance(Type serviceType, object key, params object?[]? args)
-        //{
-        //    return CreateKeyed(serviceType, null, key, args);
-        //}
-        //public Task CreateKeyedInstance(Type serviceType, Type implementationType, object key, params object?[]? args)
-        //{
-        //    return CreateKeyed(serviceType, implementationType, key, args);
-        //}
-
-        //public Task CreateInstance<TServiceType>(params object?[]? args)
-        //{
-        //    return Create(typeof(TServiceType), null, args);
-        //}
-        //public Task CreateInstance<TServiceType, TImplementation>(params object?[]? args)
-        //{
-        //    return Create(typeof(TServiceType), typeof(TImplementation), args);
-        //}
-        //public Task CreateKeyedInstance<TServiceType>(object key, params object?[]? args)
-        //{
-        //    return CreateKeyed(typeof(TServiceType), null, key, args);
-        //}
-        //public Task CreateKeyedInstance<TServiceType, TImplementation>(object key, params object?[]? args)
-        //{
-        //    return CreateKeyed(typeof(TServiceType), typeof(TImplementation), key, args);
-        //}
-        /// <summary>
-        /// Add a service at runtime
-        /// </summary>
         public virtual Task<TService> AddService<TService, TImplementation>() where TService : class
         {
             throw new NotImplementedException();
@@ -303,18 +300,44 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
             }
         }
-        protected Task CreateInstance(Expression expr, object? serviceKey, Type? serviceType)
+        protected Task CreateInstance(Expression expr, Type? serviceType)
         {
             if (expr is NewExpression newExpression)
             {
                 if (newExpression.Constructor != null && newExpression.Constructor?.ReflectedType != null)
                 {
-                    var constructor = newExpression.Constructor;
-                    var implementationType = constructor.ReflectedType;
+                    var constructorInfo = newExpression.Constructor;
+                    var implementationType = constructorInfo.ReflectedType;
                     serviceType ??= implementationType;
                     var args = newExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
-                    var argsTypes = constructor.GetParameters().Select(p => p.ParameterType).ToArray();
-                    return Create(serviceType, implementationType, serviceKey, args, argsTypes);
+                    var argsTypes = constructorInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+                    //return Create(serviceType, implementationType, serviceKey, args, argsTypes);
+                    return Create(constructorInfo, serviceType, args);
+                }
+                else
+                {
+                    Console.WriteLine($"Constructor: ------------------------");
+                }
+                throw new Exception("Constructor does not exist.");
+            }
+            else
+            {
+                throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
+            }
+        }
+        protected Task CreateKeyedInstance(Expression expr, object serviceKey, Type? serviceType)
+        {
+            if (expr is NewExpression newExpression)
+            {
+                if (newExpression.Constructor != null && newExpression.Constructor?.ReflectedType != null)
+                {
+                    var constructorInfo = newExpression.Constructor;
+                    var implementationType = constructorInfo.ReflectedType;
+                    serviceType ??= implementationType;
+                    var args = newExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
+                    var argsTypes = constructorInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+                    //return Create(serviceType, implementationType, serviceKey, args, argsTypes);
+                    return CreateKeyed(constructorInfo, serviceType, serviceKey, args);
                 }
                 else
                 {
@@ -329,10 +352,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
 
         // Create instance
-        public Task New(string serviceKey, Expression<Func<object>> expr) => CreateInstance(expr.Body, serviceKey, null);
-        public Task New<TService>(string serviceKey, Expression<Func<TService>> expr) => CreateInstance(expr.Body, serviceKey, typeof(TService));
-        public Task New(Expression<Func<object>> expr) => CreateInstance(expr.Body, null, null);
-        public Task New<TService>(Expression<Func<TService>> expr) => CreateInstance(expr.Body, null, typeof(TService));
+        public Task New(string serviceKey, Expression<Func<object>> expr) => CreateKeyedInstance(expr.Body, serviceKey, null);
+        public Task New<TService>(string serviceKey, Expression<Func<TService>> expr) => CreateKeyedInstance(expr.Body, serviceKey, typeof(TService));
+        public Task New(Expression<Func<object>> expr) => CreateInstance(expr.Body, null);
+        public Task New<TService>(Expression<Func<TService>> expr) => CreateInstance(expr.Body, typeof(TService));
         #region Non-Keyed
 
         // Static
