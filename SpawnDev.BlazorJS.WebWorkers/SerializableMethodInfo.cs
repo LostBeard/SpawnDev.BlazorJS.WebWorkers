@@ -71,8 +71,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (methodBase is ConstructorInfo constructorInfo)
             {
+                Console.WriteLine($"SerializableMethodInfo ConstructorInfo: {constructorInfo.ReflectedType.Name} {constructorInfo.Name}");
                 var mi = constructorInfo;
                 if (constructorInfo.ReflectedType == null) throw new Exception("Cannot serialize ConstructorInfo without ReflectedType");
+                MethodName = mi.Name;
                 ReflectedTypeName = GetTypeName(constructorInfo.ReflectedType);
                 DeclaringTypeName = GetTypeName(constructorInfo.DeclaringType);
                 ReturnType = GetTypeName(typeof(void));
@@ -82,6 +84,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             else if (methodBase is MethodInfo methodInfo)
             {
+                Console.WriteLine($"SerializableMethodInfo MethodInfo: {methodInfo.ReflectedType.Name} {methodInfo.Name}");
                 var mi = methodInfo;
                 if (methodInfo.ReflectedType == null) throw new Exception("Cannot serialize MethodInfo without ReflectedType");
                 if (methodInfo.IsConstructedGenericMethod)
@@ -148,6 +151,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (Resolved) return;
             Resolved = true;
+            Console.WriteLine($"Resolve: IsConstructor - {IsConstructor} {ReflectedTypeName} {MethodName}");
             if (IsConstructor)
             {
                 ConstructorInfo? constructorInfo = null;
@@ -239,9 +243,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         /// <param name="methodInfo"></param>
         /// <returns></returns>
-        public static string SerializeMethodInfo(MethodInfo methodInfo) => new SerializableMethodInfo(methodInfo).ToString();
-        public static string SerializeMethodInfo(ConstructorInfo constructorInfo) => new SerializableMethodInfo(constructorInfo).ToString();
-        public static string SerializeMethodInfo(Delegate methodDelegate) => new SerializableMethodInfo(methodDelegate.Method).ToString();
+        //public static string SerializeMethodInfo(MethodInfo methodInfo) => new SerializableMethodInfo(methodInfo).ToString();
+        //public static string SerializeMethodInfo(ConstructorInfo constructorInfo) => new SerializableMethodInfo(constructorInfo).ToString();
+        //public static string SerializeMethodInfo(Delegate methodDelegate) => new SerializableMethodInfo(methodDelegate.Method).ToString();
         public static string SerializeMethodInfo(MethodBase methodBase) => new SerializableMethodInfo(methodBase).ToString();
         /// <summary>
         /// Converts a MethodInfo that has been serialized using SerializeMethodInfo into a MethodInfo if serialization is successful or a null otherwise.
@@ -252,6 +256,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             var tmp = FromString(serializableMethodInfoJson);
             return tmp == null ? null : tmp.MethodInfo;
+        }
+        public static ConstructorInfo? DeserializeConstructorInfoInfo(string serializableMethodInfoJson)
+        {
+            var tmp = FromString(serializableMethodInfoJson);
+            return tmp == null ? null : tmp.ConstructorInfo;
         }
     }
 }
