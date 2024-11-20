@@ -881,8 +881,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
         List<RuntimeService> RuntimeServices = new List<RuntimeService>();
         bool IsCallSideParameter(ParameterInfo methodParam)
         {
+            // FromServices
             var fromServiceAttr = methodParam.GetCustomAttribute<FromServicesAttribute>();
             if (fromServiceAttr != null) return true;
+            // FromKeyedServices
+            var fromKeyedServiceAttr = methodParam.GetCustomAttribute<FromKeyedServicesAttribute>();
+            if (fromKeyedServiceAttr != null) return true;
+            // Callside
             if (GetCallSideParameter(methodParam) != null) return true;
             return false;
         }
@@ -1263,6 +1268,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (fromServiceAttr != null)
             {
                 value = await FindServiceAsync(methodParam.ParameterType);
+                return (true, value);
+            }
+            // keyed service
+            var fromKeyedServiceAttr = methodParam.GetCustomAttribute<FromKeyedServicesAttribute>();
+            if (fromKeyedServiceAttr != null)
+            {
+                var serviceKey = fromKeyedServiceAttr.Key;
+                value = await FindServiceAsync(methodParam.ParameterType, serviceKey);
                 return (true, value);
             }
             // call side
