@@ -106,7 +106,9 @@ Where **AsyncCallDispatcher** is used:
 - **[WebWorkerService.WindowTask](#webworkerservicewindowtask)** - an instance of **AsyncCallDispatcher**
 - [**WebWorkerService.Instances**](#webworkerserviceinstances) - a **List&lt;AppInstance&gt;**. **AppInstance** inherits from **AsyncCallDispatcher**  
 
-### Runtime Services
+### Runtime Services (***NEW***)
+Version 2.5.20 added support for keyed services, adding and removing services at runtime, and runtime service creation using a `new` expression. These improvements make web workers easier to use without requiring pre-registration of classes used in web workers.
+
 - Add service at runtime  
 `await caller.AddService<SomeClass>();`   
 `await caller.AddService<ISomeClass, SomeClass>();`  
