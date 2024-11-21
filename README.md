@@ -111,8 +111,7 @@ Where **AsyncCallDispatcher** is used:
 `await caller.AddService<SomeClass>();`   
 `await caller.AddService<ISomeClass, SomeClass>();`  
 - Remove service at runtime (only services added at runtime)  
-`await caller.RemoveService<SomeClass>();`  
-`await caller.RemoveService<ISomeClass, SomeClass>();`  
+`await caller.RemoveService<ISomeClass>();`  
 - Supports service keys, even on .Net 6, and .Net 7  
 
 ### Supported Instance To Instance Calling Conventions
