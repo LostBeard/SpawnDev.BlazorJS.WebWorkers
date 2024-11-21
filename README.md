@@ -106,17 +106,41 @@ Where **AsyncCallDispatcher** is used:
 - **[WebWorkerService.WindowTask](#webworkerservicewindowtask)** - an instance of **AsyncCallDispatcher**
 - [**WebWorkerService.Instances**](#webworkerserviceinstances) - a **List&lt;AppInstance&gt;**. **AppInstance** inherits from **AsyncCallDispatcher**  
 
+### Runtime Services
+- Add service at runtime
+`await caller.AddService<SomeClass>();`  
+`await caller.AddService<ISomeClass, SomeClass>();`  
+- Remove service at runtime (only services added at runtime)
+`await caller.RemoveService<SomeClass>();`  
+`await caller.RemoveService<ISomeClass, SomeClass>();`  
+- Supports service keys, even on .Net 6, and .Net 7  
+
 ### Supported Instance To Instance Calling Conventions
 
-**Expressions** - Run(), Set()  
-- Supports generics, property get and set, asynchronous and synchronous method calls.
+**Expressions** - Run(), Set(), New()
+- Supports Keyed services
+- Supports generics, property get and set, asynchronous and synchronous method calls.  
+- Supports creating new instances of keyed and non-keyed services at runtime.  
 - Supports calling private methods from inside the owning class.
+
+#### Expression examples
+- Set instance property using Set<TService, TReturn>()  
+`await caller.Set<SomeService, string>(someService => someService.SomeProperty, "Yay!");`  
+- Get instance property using Run<TService, TReturn>()  
+`var propertyValue = await caller.Run<SomeService, string>(someService => someService.SomeProperty);`  
+- Call instance method using Run<TService, TReturn>()   
+`var methodReturnValue = await caller.Run<SomeService, string>(someService => someService.SomeMethod());`  
+- Create a new instance of a class using New()  
+`await worker.New(() => new SomeClass("some init var"))`  
+- Create a new instance of a class using New<TService>() and specify the service Type to register it as  
+`await worker.New<ISomeClass>(() => new SomeClass("some init var"))`  
 
 **Delegates** - Invoke()  
 - Supports generics, asynchronous and synchronous method calls.  
 - Supports calling private methods from inside the owning class.
 
 **Interface proxy** - GetService()
+- Supports Keyed services
 - Supports generics, and asynchronous method calls. (uses DispatchProxy)  
 - Does not support static methods, private methods, synchronous calls, or properties.
 - Requires services to be registered using an interface.
