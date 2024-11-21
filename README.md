@@ -470,7 +470,7 @@ webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
 
 ## Transferable Objects
 
-SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. Setting WorkerTransfer to true will cause the property, return value, or parameter to be added to the transfer list so it can be transferred instead of copied.
+SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. Setting WorkerTransfer to true will cause the property, return value, or parameter value (or its transferable properties) to be added to the transfer list.
 
 Example
 ```cs
@@ -483,14 +483,17 @@ public class ProcessFrameResult : IDisposable
     }
 }
 
-[return: WorkerTransfer(true)]
-public async Task<ProcessFrameResult?> ProcessFrame([WorkerTransfer(true)] ArrayBuffer? frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
+[return: WorkerTransfer]
+public async Task<ProcessFrameResult?> ProcessFrame([WorkerTransfer] ArrayBuffer? frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
 {
     var ret = new ProcessFrameResult();
     // ...
     return ret;
 }
 ```
+
+***Note***  
+Some transferable objects, like OffscreenCanvas, must be added to the transferables list or the call will fail due to Javascript requirements. WebWorkers will automatically add parameters of type `OffscreenCanvas` to the transferables list without requiring the WorkerTransfer attribute.
 
 In the above example; the WorkerTransferAttribute on the return type set to `true` will cause transferable properties of the return type to be transferred.
 
