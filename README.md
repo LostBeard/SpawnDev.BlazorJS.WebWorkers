@@ -12,7 +12,7 @@
 - Supports method parameter service injection via `[FromServices]` parameter attribute
 - Works in Blazor WASM .Net 6, 7, 8, and 9.
 - SharedArrayBuffer is not required. No special HTTP headers to configure.
-- Supports transferable objects
+- Supports [transferable objects](#transferable-objects)
 - Run Blazor WASM in a ServiceWorker
 
 [Live Demo](https://blazorjs.spawndev.com/)  
@@ -468,7 +468,7 @@ workerService.SendEventToParents("progress", new PiProgress { Progress = piProgr
 webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
 ```
 
-## Worker Transferable JSObjects
+## Transferable Objects
 
 SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. Setting WorkerTransfer to true will cause the property, return value, or parameter to be added to the transfer list so it can be transferred instead of copied.
 
