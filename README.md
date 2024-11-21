@@ -107,10 +107,10 @@ Where **AsyncCallDispatcher** is used:
 - [**WebWorkerService.Instances**](#webworkerserviceinstances) - a **List&lt;AppInstance&gt;**. **AppInstance** inherits from **AsyncCallDispatcher**  
 
 ### Runtime Services
-- Add service at runtime
-`await caller.AddService<SomeClass>();`  
+- Add service at runtime  
+`await caller.AddService<SomeClass>();`   
 `await caller.AddService<ISomeClass, SomeClass>();`  
-- Remove service at runtime (only services added at runtime)
+- Remove service at runtime (only services added at runtime)  
 `await caller.RemoveService<SomeClass>();`  
 `await caller.RemoveService<ISomeClass, SomeClass>();`  
 - Supports service keys, even on .Net 6, and .Net 7  
