@@ -33,7 +33,8 @@ Tested working in the following browsers (tested with .Net 8.) Chrome Android do
 | Chrome          | Android 9+  | ✔ | ❌ (SharedWorker not supported by browser) |
 | MS Edge         | Android 9+  | ✔ | ❌ (SharedWorker not supported by browser) |
 | Firefox         | Android 9+  | ✔ | ✔ | 
-| Safari 18       | OSX Sequoia | ✔ | ✔ |
+| Safari 14.1     | macOS Big Sur | ✔ | ❌ (SharedWorker not supported by browser) |
+| Safari 16.5     | macOS Ventura | ✔ | ✔ | 
 
 If you have ***ANY*** issues or questions please open an issue [here](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/issues) on GitHub.
 
