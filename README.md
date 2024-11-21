@@ -2,11 +2,11 @@
 # SpawnDev.BlazorJS.WebWorkers
 [![NuGet](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=SpawnDev.BlazorJS.WebWorkers)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers) 
 
-- Easily call Blazor Services and static methods in separate threads with WebWorkers and SharedWebWorkers 
-- Call services and static methods in other Windows
+- Call services in separate threads with WebWorkers and SharedWebWorkers 
+- Call services in other Windows
 - Add and remove runtime services
 - Supports Keyed services
-- Instantiate any class and add it as a service at runtime
+- Instantiate any class and add it as a runtime service using a `new` expression
 - [TaskPool](#webworkerservicetaskpool) support via WebWorkers
 - Component's can call their own private static methods in background threads (supports service injection)
 - Supports method parameter service injection via `[FromServices]` parameter attribute
