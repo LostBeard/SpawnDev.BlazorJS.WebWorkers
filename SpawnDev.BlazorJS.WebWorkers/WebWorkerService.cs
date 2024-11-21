@@ -204,7 +204,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 Console.WriteLine("WebWorkerJSScript: " + WebWorkerJSScript);
 #endif
                 var hardwareConcurrency = JS.Get<int?>("navigator.hardwareConcurrency");
-                MaxWorkerCount = hardwareConcurrency ?? 0;
+                MaxWorkerCount = hardwareConcurrency ?? 1; // assume 1 if undefined/null (Safari 14.1 it is null, but it supports workers)
                 if (IServiceCollectionExtensions.ServiceWorkerConfig != null)
                 {
                     ServiceWorkerConfig = IServiceCollectionExtensions.ServiceWorkerConfig;
