@@ -1,6 +1,6 @@
 
 # SpawnDev.BlazorJS.WebWorkers
-[![NuGet](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=SpawnDev.BlazorJS.WebWorkers)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers) 
+[![NuGet](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=SpawnDev.BlazorJS.WebWorkers)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers)  
 
 - Call services in separate threads with WebWorkers and SharedWebWorkers 
 - Call services in other Windows
@@ -25,16 +25,17 @@
 
 Tested working in the following browsers (tested with .Net 8.) Chrome Android does not currently support SharedWorkers. 
 
-| Browser         | WebWorker Status | SharedWebWorker Status |
-|-----------------|------------------|------------------------|
-| Chrome          | ✔ | ✔ |
-| MS Edge         | ✔ | ✔ |
-| Firefox         | ✔ | ✔ | 
-| Chrome Android  | ✔ | ❌ (SharedWorker not supported by browser) |
-| MS Edge Android | ✔ | ❌ (SharedWorker not supported by browser) |
-| Firefox Android | ✔ | ✔ | 
+| Browser         | OS          | WebWorker Status | SharedWebWorker Status |
+|-----------------|-------------|------------------|------------------------|
+| Chrome          | Windows 10  | ✔ | ✔ |
+| MS Edge         | Windows 10  | ✔ | ✔ |
+| Firefox         | Windows 10  | ✔ | ✔ | 
+| Chrome          | Android 9+  | ✔ | ❌ (SharedWorker not supported by browser) |
+| MS Edge         | Android 9+  | ✔ | ❌ (SharedWorker not supported by browser) |
+| Firefox         | Android 9+  | ✔ | ✔ | 
+| Safari 18       | OSX Sequoia | ✔ | ✔ |
 
-Issues can be reported [here](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/issues) on GitHub.
+If you have ***ANY*** issues or questions please open an issue [here](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/issues) on GitHub.
 
 ## WebWorkerService
 The WebWorkerService singleton contains many methods for working with multiple instances of your Blazor app running in any scope, whether Window, Worker, SharedWorker, or ServiceWorker. 

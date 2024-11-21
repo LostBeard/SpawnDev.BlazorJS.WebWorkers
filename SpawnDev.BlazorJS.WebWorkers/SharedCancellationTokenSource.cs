@@ -12,8 +12,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
     [JsonConverter(typeof(JsonConverters.HybridObjectConverterFactory))]
     public class SharedCancellationTokenSource : IDisposable
     {
+        /// <summary>
+        /// Returns true if SharedCancellationTokenSource appears to be supported
+        /// </summary>
+        public static bool Supported => SharedArrayBuffer.Supported;
         private static BlazorJSRuntime JS => BlazorJSRuntime.JS;
-        private static bool CrossOriginIsolated => JS.CrossOriginIsolated;
         /// <summary>
         /// Returns true if the cancelled flag is set to true
         /// </summary>
