@@ -4,7 +4,7 @@
 
 - Call services in separate threads with WebWorkers and SharedWebWorkers 
 - Call services in other Windows
-- Add and remove runtime services
+- Add and remove services at runtime ([Runtime Services](#runtime-services))
 - Supports Keyed services
 - Instantiate any class and add it as a runtime service using a `new` expression
 - [TaskPool](#webworkerservicetaskpool) support via WebWorkers
@@ -109,7 +109,7 @@ Where **AsyncCallDispatcher** is used:
 - **[WebWorkerService.WindowTask](#webworkerservicewindowtask)** - an instance of **AsyncCallDispatcher**
 - [**WebWorkerService.Instances**](#webworkerserviceinstances) - a **List&lt;AppInstance&gt;**. **AppInstance** inherits from **AsyncCallDispatcher**  
 
-### Runtime Services (***NEW***)
+### Runtime Services
 Version 2.5.20 added support for keyed services, adding and removing services at runtime, and runtime service creation using a `new` expression. These improvements make web workers easier to use without requiring pre-registration of classes used in web workers.
 
 - Add service at runtime  
