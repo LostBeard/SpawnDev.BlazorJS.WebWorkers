@@ -492,10 +492,10 @@ public async Task<ProcessFrameResult?> ProcessFrame([WorkerTransfer] ArrayBuffer
 }
 ```
 
+In the above example; the WorkerTransferAttribute on the return type set to `true` will cause transferable properties of the return type to be transferred.
+
 ***Note***  
 Some transferable objects, like OffscreenCanvas, must be added to the transferables list or the call will fail due to Javascript requirements. WebWorkers will automatically add parameters of type `OffscreenCanvas` to the transferables list without requiring the WorkerTransfer attribute.
-
-In the above example; the WorkerTransferAttribute on the return type set to `true` will cause transferable properties of the return type to be transferred.
 
 ### Transferable JSObject types. Source [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects#supported_objects)
 - ArrayBuffer  
