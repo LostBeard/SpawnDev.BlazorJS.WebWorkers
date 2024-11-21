@@ -676,16 +676,6 @@ class HTMLVideoElement extends HTMLElement {
         super();
     }
 }
-class HTMLCanvasElement extends OffscreenCanvas {
-    constructor() {
-        super(1, 1);
-    }
-}
-class CanvasRenderingContext2D extends OffscreenCanvasRenderingContext2D {
-    constructor() {
-        super();
-    }
-}
 class IntersectionObserver { }
 class MutationObserver { }
 class Comment extends HTMLElement {
