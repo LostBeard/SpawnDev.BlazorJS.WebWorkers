@@ -143,10 +143,10 @@ Version 2.5.20 added support for keyed services, adding and removing services at
 `await worker.Set<SomeService, string>(someService => someService.SomeProperty, "new property value");`  
 
 - Property Get value using `Run<TService, TProperty>()`  
-`var propertyValue = await worker.Run<SomeService, string>(someService => someService.SomeProperty);`  
+`string propertyValue = await worker.Run<SomeService, string>(someService => someService.SomeProperty);`  
 
 - Method Call using `Run<TService, TReturn>()`   
-`var methodReturnValue = await worker.Run<SomeService, string>(someService => someService.SomeMethod("some data"));`  
+`string methodReturnValue = await worker.Run<SomeService, string>(someService => someService.SomeMethod("some data"));`  
 
 - Create a new instance of a class using `New()` and register it as a service   
 `await worker.New(() => new SomeClass("some init var"))`  
