@@ -116,32 +116,41 @@ Where **AsyncCallDispatcher** is used:
 - [**WebWorkerService.Instances**](#webworkerserviceinstances) - a **List&lt;AppInstance&gt;**. **AppInstance** inherits from **AsyncCallDispatcher**  
 
 ### Runtime Services
-Version 2.5.20 added support for keyed services, adding and removing services at runtime, and runtime service creation using a `new` expression. These improvements make web workers easier to use without requiring pre-registration of classes used in web workers.
+Version 2.5.20 added support for keyed services, adding and removing services at runtime, and runtime service creation using a `new` expression. These additions make web workers easier to use without requiring pre-registration of classes used in web workers.
 
 - Add service at runtime  
-`await caller.AddService<SomeClass>();`   
-`await caller.AddService<ISomeClass, SomeClass>();`  
+`await worker.AddService<SomeClass>();`   
+`await worker.AddService<ISomeClass, SomeClass>();`  
+
 - Remove service at runtime (only services added at runtime)  
-`await caller.RemoveService<ISomeClass>();`  
+`await worker.RemoveService<ISomeClass>();`  
+
+- Check if a service exists
+`bool exists = await worker.ServiceExists<ISomeClass>();`  
+
 - Supports service keys, even on .Net 6, and .Net 7  
 
 ### Supported Instance To Instance Calling Conventions
 
 **Expressions** - Run(), Set(), New()
-- Supports Keyed services
+- Supports Keyed services.
 - Supports generics, property get and set, asynchronous and synchronous method calls.  
 - Supports creating new instances of keyed and non-keyed services at runtime.  
 - Supports calling private methods from inside the owning class.
 
 #### Expression examples
-- Set instance property using Set<TService, TReturn>()  
-`await caller.Set<SomeService, string>(someService => someService.SomeProperty, "Yay!");`  
-- Get instance property using Run<TService, TReturn>()  
-`var propertyValue = await caller.Run<SomeService, string>(someService => someService.SomeProperty);`  
+- Set instance property value using Set<TService, TReturn>()  
+`await worker.Set<SomeService, string>(someService => someService.SomeProperty, "new property value");`  
+
+- Get instance property value using Run<TService, TReturn>()  
+`var propertyValue = await worker.Run<SomeService, string>(someService => someService.SomeProperty);`  
+
 - Call instance method using Run<TService, TReturn>()   
-`var methodReturnValue = await caller.Run<SomeService, string>(someService => someService.SomeMethod());`  
-- Create a new instance of a class using New()  
+`var methodReturnValue = await worker.Run<SomeService, string>(someService => someService.SomeMethod("some data"));`  
+
+- Create a new instance of a class using New() and register it as a service
 `await worker.New(() => new SomeClass("some init var"))`  
+
 - Create a new instance of a class using New<TService>() and specify the service Type to register it as  
 `await worker.New<ISomeClass>(() => new SomeClass("some init var"))`  
 
@@ -150,10 +159,10 @@ Version 2.5.20 added support for keyed services, adding and removing services at
 - Supports calling private methods from inside the owning class.
 
 **Interface proxy** - GetService()
-- Supports Keyed services
+- Requires services to be registered using an interface.
+- Supports Keyed services.
 - Supports generics, and asynchronous method calls.
 - Does not support static methods, private methods, synchronous calls, or properties.
-- Requires services to be registered using an interface.
 
 WebWorkerService.TaskPool Example that demonstrates using **AsyncCallDispatcher's** Expression, Delegate, and Interface proxy invokers to call service methods in a TaskPool WebWorker.
 
