@@ -9,7 +9,9 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddBlazorJSRuntime(out var JS);
-builder.Services.AddWebWorkerService();
+builder.Services.AddWebWorkerService(a => { 
+
+});
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
