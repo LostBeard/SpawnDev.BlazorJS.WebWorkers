@@ -5,8 +5,8 @@
 - Call services in separate threads with WebWorkers and SharedWebWorkers 
 - Call services in other Windows
 - Add and remove services at runtime ([Runtime Services](#runtime-services))
-- Supports Keyed services
-- Instantiate any class and add it as a runtime service using a `new` expression
+- Supports keyed services
+- Create a new instance of a class and add it as a runtime service using a `new` expression
 - [TaskPool](#webworkerservicetaskpool) support via WebWorkers
 - Component's can call their own private static methods in background threads (supports service injection)
 - Supports method parameter service injection via `[FromServices]` parameter attribute
