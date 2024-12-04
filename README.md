@@ -125,7 +125,7 @@ Version 2.5.20 added support for keyed services, adding and removing services at
 - Remove service at runtime (only services added at runtime)  
 `await worker.RemoveService<ISomeClass>();`  
 
-- Check if a service exists
+- Check if a service exists  
 `bool exists = await worker.ServiceExists<ISomeClass>();`  
 
 - Supports service keys, even on .Net 6, and .Net 7  
