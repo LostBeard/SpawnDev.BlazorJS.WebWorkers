@@ -152,7 +152,7 @@ Version 2.5.20 added support for keyed services, adding and removing services at
 `await worker.New(() => new SomeClass("some init var"))`  
 
 - Create a new instance of a class using `New<TService>()` and specify the service Type to register it as  
-`await worker.New<ISomeClass>(() => new SomeClass("some init var"))`  
+`await worker.New<ISomeRendererClass>(() => new SomeRendererClass(offscreenCanas))`  
 
 **Delegates** - Invoke()  
 - Supports generics, asynchronous and synchronous method calls.  
