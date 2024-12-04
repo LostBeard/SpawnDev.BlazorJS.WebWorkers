@@ -80,6 +80,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Returns true if there is at least 1 request waiting for a result
         /// </summary>
         public bool WaitingForResponse => _waiting.Count > 0;
+        protected static BlazorJSRuntime JS => BlazorJSRuntime.JS;
         Dictionary<string, TaskCompletionSource<Array>> _waiting = new Dictionary<string, TaskCompletionSource<Array>>();
         protected IServiceProvider ServiceProvider;
         protected IServiceCollection ServiceDescriptors;
@@ -90,7 +91,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public bool MessagePortSupportsTransferable { get; private set; }
         public ServiceCallDispatcher(IWebAssemblyServices webAssemblyServices, IMessagePortSimple port)
         {
-            WebAssmeblyServices = webAssemblyServices;
+            WebAssemblyServices = webAssemblyServices;
             ServiceProvider = webAssemblyServices.Services;
             ServiceDescriptors = webAssemblyServices.Descriptors;
             if (port is IMessagePort messagePort)
@@ -104,11 +105,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
             additionalCallArgs.Add(new CallSideParameter("caller", () => this, typeof(ServiceCallDispatcher)));
             LocalInfo = new ServiceCallDispatcherInfo { InstanceId = JS.InstanceId, GlobalThisTypeName = JS.GlobalThisTypeName };
         }
-        IWebAssemblyServices WebAssmeblyServices;
+        IWebAssemblyServices WebAssemblyServices;
         public ServiceCallDispatcher(IWebAssemblyServices webAssemblyServices)
         {
             LocalInvoker = true;
-            WebAssmeblyServices = webAssemblyServices;
+            WebAssemblyServices = webAssemblyServices;
             ServiceProvider = webAssemblyServices.Services;
             ServiceDescriptors = webAssemblyServices.Descriptors;
             additionalCallArgs.Add(new CallSideParameter("caller", () => this, typeof(ServiceCallDispatcher)));
@@ -116,7 +117,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             RemoteInfo = LocalInfo;
             _oninit.SetResult(0);
         }
-        protected static BlazorJSRuntime JS => BlazorJSRuntime.JS;
         private void _port_OnError()
         {
             JS.Log("_port_OnError");
