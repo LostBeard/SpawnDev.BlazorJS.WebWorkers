@@ -83,9 +83,14 @@ using SpawnDev.BlazorJS.WebWorkers;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
+
 // Add SpawnDev.BlazorJS.BlazorJSRuntime
 builder.Services.AddBlazorJSRuntime();
+
 // Add SpawnDev.BlazorJS.WebWorkers.WebWorkerService
+// Use defaults (PoolSize = 0, MaxPoolSize = 1, AutoGrow = true):
+// builder.Services.AddWebWorkerService();
+// Or configure:
 builder.Services.AddWebWorkerService(webWorkerService =>
 {
     // Optionally configure the WebWorkerService service before it is used
@@ -97,6 +102,7 @@ builder.Services.AddWebWorkerService(webWorkerService =>
     // This starts up 2 WebWorkers to handle TaskPool tasks as needed
     webWorkerService.TaskPool.PoolSize = webWorkerService.GlobalScope == GlobalScope.Window ? 2 : 0;
 });
+
 // Other misc. services
 builder.Services.AddSingleton<IMathService, MathService>();
 builder.Services.AddScoped((sp) => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
