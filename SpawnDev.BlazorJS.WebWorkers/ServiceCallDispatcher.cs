@@ -132,9 +132,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (_portSimple == null) return;
             ReadyFlagSent = true;
             var needsInfo = RemoteInfo == null;
-#if DEBUG && false
-            JS.Log("SendReadyFlag sent", "init", LocalInfo, needsInfo);
-#endif
             _portSimple.PostMessage(new object?[] { "init", LocalInfo, needsInfo });
         }
         public event Action<ServiceCallDispatcher, Array> OnMessage;
@@ -160,9 +157,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         protected async void _worker_OnMessage(MessageEvent e)
         {
-#if DEBUG && false
-            JS.Log("_worker_OnMessage", e);
-#endif
             try
             {
                 var args = e.GetData<Array>();
@@ -240,40 +234,48 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         break;
                     case "call":
                         {
-                            await HandleCallMessage(args, false);
+                            var serviceTypeName = args.Shift<string>();
+                            var serviceType = TypeExtensions.GetType(serviceTypeName);
+                            await HandleCallMessage(serviceType, args, false);
                         }
                         break;
                     case "msg":
                         {
-                            await HandleCallMessage(args, true);
+                            var serviceTypeName = args.Shift<string>();
+                            var serviceType = TypeExtensions.GetType(serviceTypeName);
+                            await HandleCallMessage(serviceType, args, true);
                         }
                         break;
                     case "callKeyed":
                         {
-                            var keyTypeName = args.Shift<string>(); // 1
+                            var serviceTypeName = args.Shift<string>();
+                            var serviceType = TypeExtensions.GetType(serviceTypeName);
+                            var keyTypeName = args.Shift<string>();
                             var keyType = TypeExtensions.GetType(keyTypeName);
                             var key = args.Shift(keyType!);
-                            await HandleCallMessage(args, false, true, key);
+                            await HandleCallMessage(serviceType, args, false, true, key);
                         }
                         break;
                     case "msgKeyed":
                         {
-                            var keyTypeName = args.Shift<string>(); // 1
+                            var serviceTypeName = args.Shift<string>();
+                            var serviceType = TypeExtensions.GetType(serviceTypeName);
+                            var keyTypeName = args.Shift<string>();
                             var keyType = TypeExtensions.GetType(keyTypeName);
                             var key = args.Shift(keyType!);
-                            await HandleCallMessage(args, true, true, key);
+                            await HandleCallMessage(serviceType, args, true, true, key);
                         }
                         break;
                 }
             }
             catch (Exception ex)
             {
-                BlazorJSRuntime.JS.Log("ERROR: ", e);
-                Console.WriteLine($"ERROR: {ex.Message}");
-                Console.WriteLine($"ERROR stack trace: {ex.StackTrace}");
+                JS.Log("ERROR: ", e);
+                JS.Log($"ERROR: {ex.Message}");
+                JS.Log($"ERROR stack trace: {ex.StackTrace}");
             }
         }
-        async Task HandleCallMessage(Array args, bool noReply, bool keyed = false, object? key = null)
+        async Task HandleCallMessage(Type serviceType, Array args, bool noReply, bool keyed = false, object? key = null)
         {
             string requestId = "";
             object? retValue = null;
@@ -293,7 +295,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     throw new Exception($"Invalid method signature not found. Invalid ReflectedType.");
                 }
-                var serviceType = methodInfo.ReflectedType;
                 object? service = null;
                 if (!methodInfo.IsStatic)
                 {
@@ -318,9 +319,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 // the call failed
                 err = ex.Message;
-#if DEBUG
-                Console.WriteLine($"Execution of remote call failed: {ex.Message}");
-                Console.WriteLine($"Stack: {ex.StackTrace ?? ""}");
+#if DEBUG && false
+                JS.Log($"Execution of remote call failed: {ex.Message}");
+                JS.Log($"Stack: {ex.StackTrace ?? ""}");
 #endif
             }
             // Post call cleanup
@@ -362,7 +363,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             catch (Exception ex)
             {
                 // failed to notify remote endpoint of result
-                Console.WriteLine($"Failed to notify remote endpoint of result: {ex.Message}");
+                JS.Log($"Failed to notify remote endpoint of result: {ex.Message}");
             }
         }
         /// <summary>
@@ -376,7 +377,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (data != null) outMsg.AddRange(data);
             _portSimple?.PostMessage(outMsg);
         }
-        private async Task<object?> LocalCall(MethodInfo methodInfo, object?[]? args = null)
+        private async Task<object?> LocalCall(Type serviceType, MethodInfo methodInfo, object?[]? args = null)
         {
             if (methodInfo == null)
             {
@@ -386,7 +387,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (!methodInfo.IsStatic)
             {
                 // non-static methods calls must point at a registered service
-                service = await FindServiceAsync(methodInfo.ReflectedType!);
+                service = await FindServiceAsync(serviceType);
                 if (service == null)
                 {
                     throw new NullReferenceException(nameof(service));
@@ -394,7 +395,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             return await methodInfo.InvokeAsync(service, args);
         }
-        private async Task<object?> LocalCall(object key, MethodInfo methodInfo, object?[]? args = null)
+        private async Task<object?> LocalCall(Type serviceType, object key, MethodInfo methodInfo, object?[]? args = null)
         {
             if (methodInfo == null)
             {
@@ -404,7 +405,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (!methodInfo.IsStatic)
             {
                 // non-static methods calls must point at a registered service
-                service = await FindServiceAsync(methodInfo.ReflectedType!, key);
+                service = await FindServiceAsync(serviceType, key);
                 if (service == null)
                 {
                     throw new NullReferenceException(nameof(service));
@@ -415,21 +416,18 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Calls the MethodInfo on remote context
         /// </summary>
-        /// <param name="key"></param>
+        /// <param name="serviceType"></param>
+        /// <param name="serviceKey"></param>
         /// <param name="methodInfo"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public override async Task<object?> CallKeyed(object key, MethodInfo methodInfo, object?[]? args = null)
+        public override async Task<object?> CallKeyed(Type serviceType, object serviceKey, MethodInfo methodInfo, object?[]? args = null)
         {
-#if DEBUG && false
-            JS.Log($"Call", methodInfo.Name, LocalInvoker);
-#endif
             if (LocalInvoker)
             {
-                return await LocalCall(key, methodInfo, args);
+                return await LocalCall(serviceType, serviceKey, methodInfo, args);
             }
             await WhenReady;
-            var serviceType = methodInfo.ReflectedType;
             if (_portSimple == null)
             {
                 throw new Exception("ServiceCallDispatcher.Call: port is null.");
@@ -443,8 +441,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var requestId = Guid.NewGuid().ToString();
             var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
             var msgData = PreSerializeArgs(requestId, methodInfo, args, out var transferable);
-            var keyTypeName = TypeExtensions.GetFullName(key!.GetType());
-            var msgOut = new List<object?> { markedNoReply ? "msgKeyed" : "callKeyed", keyTypeName, key, requestId, targetMethod };
+            var keyTypeName = TypeExtensions.GetFullName(serviceKey!.GetType());
+            var serviceTypeName = TypeExtensions.GetFullName(serviceType);
+            var msgOut = new List<object?> { markedNoReply ? "msgKeyed" : "callKeyed", serviceTypeName, keyTypeName, serviceKey, requestId, targetMethod };
             msgOut.AddRange(msgData);
             if (_port != null) _port.PostMessage(msgOut, transferable);
             else _portSimple?.PostMessage(msgOut);
@@ -466,20 +465,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 string? err = returnArray.GetItem<string?>(0);
                 if (!string.IsNullOrEmpty(err)) throw new Exception(err);
                 var finalReturnType = methodInfo.GetFinalReturnType();
-#if DEBUG && false
-                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name);
-#endif
                 if (finalReturnType.IsVoid())
                 {
-#if DEBUG && false
-                    JS.Log($"Call", methodInfo.Name, "return IsVoid");
-#endif
                     return null;
                 }
                 var ret = returnArray.GetItem(finalReturnType, 1);
-#if DEBUG && false
-                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name, ret);
-#endif
                 return ret;
             }
             finally
@@ -490,20 +480,17 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Calls the MethodInfo on remote context
         /// </summary>
+        /// <param name="serviceType"></param>
         /// <param name="methodBase"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public override async Task<object?> Call(MethodInfo methodBase, object?[]? args = null)
+        public override async Task<object?> Call(Type serviceType, MethodInfo methodBase, object?[]? args = null)
         {
-#if DEBUG && false
-            JS.Log($"Call", methodInfo.Name, LocalInvoker);
-#endif
             if (LocalInvoker)
             {
-                return await LocalCall(methodBase, args);
+                return await LocalCall(serviceType, methodBase, args);
             }
             await WhenReady;
-            var serviceType = methodBase.ReflectedType;
             if (_portSimple == null)
             {
                 throw new Exception("ServiceCallDispatcher.Call: port is null.");
@@ -516,8 +503,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var markedNoReply = originCallableAttribute?.NoReply ?? false;
             var requestId = Guid.NewGuid().ToString();
             var targetMethod = SerializableMethodInfo.SerializeMethodInfo(methodBase);
+            var serviceTypeName = TypeExtensions.GetFullName(serviceType);
             var msgData = PreSerializeArgs(requestId, methodBase, args, out var transferable);
-            var msgOut = new List<object?> { markedNoReply ? "msg" : "call", requestId, targetMethod };
+            var msgOut = new List<object?> { markedNoReply ? "msg" : "call", serviceTypeName, requestId, targetMethod };
             msgOut.AddRange(msgData);
             if (_port != null) _port.PostMessage(msgOut, transferable);
             else _portSimple?.PostMessage(msgOut);
@@ -539,20 +527,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 string? err = returnArray.GetItem<string?>(0);
                 if (!string.IsNullOrEmpty(err)) throw new Exception(err);
                 var finalReturnType = methodBase is MethodInfo methodInfo ? methodInfo.GetFinalReturnType() : typeof(void);
-#if DEBUG && false
-                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name);
-#endif
                 if (finalReturnType.IsVoid())
                 {
-#if DEBUG && false
-                    JS.Log($"Call", methodInfo.Name, "return IsVoid");
-#endif
                     return null;
                 }
                 var ret = returnArray.GetItem(finalReturnType, 1);
-#if DEBUG && false
-                JS.Log($"Call", methodInfo.Name, "return", finalReturnType.Name, ret);
-#endif
                 return ret;
             }
             finally
@@ -638,7 +617,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 else if (methodParamType.IsGenericType) genericType = methodParamType.GetGenericTypeDefinition();
 #if DEBUG && false
                 var genericTypeStr = genericType == null ? "NULL" : genericType.FullName;
-                Console.WriteLine($"genericTypeStr: {genericTypeStr}");
+                JS.Log($"genericTypeStr: {genericTypeStr}");
 #endif
                 var coreType = genericType ?? methodParamType;
                 var workerTransferSet = false;
@@ -839,7 +818,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     {
                         ret[i] = new Action(() =>
                         {
-                            //JS.Log($"Action called: {actionId}");
                             var callbackMsg = new List<object?> { "action", requestId, actionId };
                             _portSimple?.PostMessage(callbackMsg);
                         });
@@ -848,7 +826,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     {
                         ret[i] = CreateTypedAction(genericTypes, new Action<object?[]>((args) =>
                         {
-                            //JS.Log($"Action called: {actionId} {o}");
                             var callbackMsg = new List<object?> { "action", requestId, actionId };
                             callbackMsg.AddRange(args);
                             _portSimple?.PostMessage(callbackMsg);
@@ -922,6 +899,31 @@ namespace SpawnDev.BlazorJS.WebWorkers
             return null;
 #endif
         }
+        /// <summary>
+        /// Adds a runtime service
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="implementationType"></param>
+        /// <returns></returns>
+        public override async Task<bool> AddService(Type serviceType, Type implementationType)
+        {
+            var added = await Run(() => _AddService(serviceType, implementationType));
+            return added;
+        }
+        /// <summary>
+        /// Add a runtime keyed service
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="implementationType"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public override async Task<bool> AddKeyedService(Type serviceType, Type implementationType, object key)
+        {
+            var keyType = key?.GetType();
+            using var jsKey = key == null ? null : JS.ReturnMe<JSObject>(key);
+            var added = await Run(() => _AddKeyedService(serviceType, implementationType, keyType, jsKey));
+            return added;
+        }
         private async Task<bool> _AddService(Type serviceType, Type implementationType)
         {
             var service = await FindServiceAsync(serviceType);
@@ -930,30 +932,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 ServiceType = serviceType,
                 ImplementationType = implementationType ?? serviceType,
+                IsKeyed = false,
             });
             return true;
         }
-        /// <summary>
-        /// Add a service to the remote instance
-        /// </summary>
-        /// <typeparam name="TService"></typeparam>
-        /// <typeparam name="TImplementation"></typeparam>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public override async Task<TService> AddService<TService, TImplementation>() where TService : class
+        private async Task<bool> _AddKeyedService(Type serviceType, Type implementationType, Type keyType, JSObject? jsKey)
         {
-            if (!typeof(TService).IsInterface) throw new Exception($"{nameof(TService)} must be an interface");
-            var added = await Run(() => _AddService(typeof(TService), typeof(TImplementation)));
-            var ret = GetService<TService>();
-            return ret;
-        }
-        public override async Task<bool> AddService<TService>()
-        {
-            var added = await Run(() => _AddService(typeof(TService), typeof(TService)));
-            return added;
-        }
-        private async Task<bool> _AddService(Type serviceType, Type implementationType, string key)
-        {
+            var key = keyType == null ? null : jsKey?.JSRef?.As(keyType);
             var service = await FindServiceAsync(serviceType, key);
             if (service != null) return false;
             RuntimeServices.Add(new RuntimeService
@@ -965,12 +950,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
             });
             return true;
         }
-        public override async Task<bool> AddKeyedService<TService>(string key)
-        {
-            var added = await Run(() => _AddService(typeof(TService), typeof(TService), key));
-            return added;
-        }
-
         static object[] DeserializeArray(Array args, Type[] argTypes, int count = -1)
         {
             if (args == null) throw new NullReferenceException(nameof(args));
@@ -1112,7 +1091,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 return removed;
             }
         }
-        private async Task _CreateKeyed(string constructorInfoJson, Type serviceType, Type? implementationType, Type? keyType, JSObject? jsKey, Array? args, Type[]? argTypes, [TransferableList] object[]? transferables)
+        private async Task _CreateKeyedService(string constructorInfoJson, Type serviceType, Type? implementationType, Type? keyType, JSObject? jsKey, Array? args, Type[]? argTypes, [TransferableList] object[]? transferables)
         {
             var constructorInfo = SerializableMethodInfo.DeserializeConstructorInfoInfo(constructorInfoJson);
             var isKeyed = keyType != null;
@@ -1159,7 +1138,27 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             RuntimeServices.Add(runtimeServiceInfo);
         }
-        protected override async Task CreateKeyed(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
+        /// <summary>
+        /// Create a new runtime service
+        /// </summary>
+        /// <param name="constructorInfo"></param>
+        /// <param name="serviceType"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public override Task CreateService(ConstructorInfo constructorInfo, Type? serviceType, object[]? args)
+        {
+            return CreateKeyedService(constructorInfo, serviceType, null, args);
+        }
+        /// <summary>
+        /// Create a new runtime keyed service
+        /// </summary>
+        /// <param name="constructorInfo"></param>
+        /// <param name="serviceType"></param>
+        /// <param name="serviceKey">If null, a non-keyed service will be created</param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public override async Task CreateKeyedService(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
         {
             var implementationType = constructorInfo.ReflectedType;
             var argTypes = constructorInfo.GetParameters().Select(o => o.ParameterType).ToArray();
@@ -1183,10 +1182,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
                 runtimeServiceInfo = new RuntimeService
                 {
+                    ServiceType = serviceType ?? implementationType,
                     ImplementationType = implementationType ?? serviceType,
                     ServiceKey = serviceKey,
                     IsKeyed = isKeyed,
-                    ServiceType = serviceType ?? implementationType,
                 };
                 if (argTypes == null || argTypes.Length == 0 || args == null || args.Length == 0)
                 {
@@ -1217,23 +1216,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 using var jsKey = serviceKey == null ? null : JS.ReturnMe<JSObject>(serviceKey);
                 var keyType = serviceKey?.GetType();
                 var constructorInfoJson = SerializableMethodInfo.SerializeMethodInfo(constructorInfo);
-                await Run(() => _CreateKeyed(constructorInfoJson, serviceType, implementationType, keyType, jsKey, argsArray, argTypes, transferables));
+                await Run(() => _CreateKeyedService(constructorInfoJson, serviceType, implementationType, keyType, jsKey, argsArray, argTypes, transferables));
             }
-        }
-        /// <summary>
-        /// Add a service to the remote instance
-        /// </summary>
-        /// <typeparam name="TService"></typeparam>
-        /// <typeparam name="TImplementation"></typeparam>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public override async Task<TService> AddKeyedService<TService, TImplementation>(string key) where TService : class
-        {
-            if (!typeof(TService).IsInterface) throw new Exception($"{nameof(TService)} must be an interface");
-            var added = await Run(() => _AddService(typeof(TService), typeof(TImplementation), key));
-            var ret = GetService<TService>(key);
-            return ret;
         }
         async Task<object?> FindServiceAsync(Type serviceType)
         {
@@ -1292,16 +1276,25 @@ namespace SpawnDev.BlazorJS.WebWorkers
 
             return additionalCallArgs.Where(o => o.Name == p.Name && o.Type == p.ParameterType).FirstOrDefault();
         }
+        /// <summary>
+        /// Returns true if this instance has been disposed
+        /// </summary>
         public bool IsDisposed { get; private set; } = false;
         protected virtual void Dispose(bool disposing)
         {
             if (IsDisposed) return;
             IsDisposed = true;
         }
+        /// <summary>
+        /// Dispose resources
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
         }
+        /// <summary>
+        /// Finalizer
+        /// </summary>
         ~ServiceCallDispatcher()
         {
             Dispose(false);

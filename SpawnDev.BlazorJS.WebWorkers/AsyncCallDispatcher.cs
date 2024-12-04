@@ -20,79 +20,159 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// MethodInfo - All calls funnel to this call. Supports generics, property get and set, asynchronous and synchronous method calls.<br />
     /// - Call<br />
     /// </summary>
-    public partial class AsyncCallDispatcher
+    public abstract class AsyncCallDispatcher
     {
         /// <summary>
         /// The binding flags to use when searching for methods
         /// </summary>
         protected BindingFlags MethodBindingFlags { get; set; } = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
         /// <summary>
-        /// A debug version of DispatchCall that should be overridden
+        /// Must be overridden by inheriting class
         /// </summary>
+        /// <param name="serviceType"></param>
         /// <param name="methodInfo"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public virtual Task<object?> Call(MethodInfo methodInfo, object?[]? args = null)
-        {
-            var serializedMethodInfo = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
-            var argsCount = args == null ? 0 : args.Length;
-            Console.WriteLine($"SendCall: {argsCount} {serializedMethodInfo}");
-            var mi = SerializableMethodInfo.DeserializeMethodInfo(serializedMethodInfo);
-            Console.WriteLine($"SendCall: {(mi == null ? "method NOT FOUND" : "method found")}");
-            return Task.FromResult((object)"");
-        }        
-        protected virtual Task Create(ConstructorInfo constructorInfo, Type? serviceType, object[]? args)
-        {
-            return CreateKeyed(constructorInfo, serviceType, null, args);
-        }
-        protected virtual Task CreateKeyed(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract Task<object?> Call(Type serviceType, MethodInfo methodInfo, object?[]? args = null);
+        /// <summary>
+        /// Must be overridden by inheriting class
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="serviceKey"></param>
+        /// <param name="methodInfo"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public abstract Task<object?> CallKeyed(Type serviceType, object serviceKey, MethodInfo methodInfo, object?[]? args = null);
+        /// <summary>
+        /// Must be implemented by the inheriting class to function
+        /// </summary>
+        /// <param name="constructorInfo"></param>
+        /// <param name="serviceType"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public abstract Task CreateService(ConstructorInfo constructorInfo, Type? serviceType, object[]? args);
+        /// <summary>
+        /// Must be implemented by the inheriting class to function
+        /// </summary>
+        /// <param name="constructorInfo"></param>
+        /// <param name="serviceType"></param>
+        /// <param name="serviceKey">If this is null, a non-keyed service will be created</param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public abstract Task CreateKeyedService(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args);
+        /// <summary>
+        /// Remove the specified RuntimeService
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <returns></returns>
         public Task<bool> RemoveService<TService>() => RemoveService(typeof(TService));
+        /// <summary>
+        /// Remove the specified RuntimeService with the given key
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public Task<bool> RemoveKeyedService<TService>(object key) => RemoveKeyedService(typeof(TService), key);
-        public virtual Task<bool> RemoveService(Type serviceType)
-        {
-            throw new NotImplementedException();
-        }
-        public virtual Task<bool> RemoveKeyedService(Type serviceType, object key)
-        {
-            throw new NotImplementedException();
-        }
+        /// <summary>
+        /// Remove the specified RuntimeService
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <returns></returns>
+        public abstract Task<bool> RemoveService(Type serviceType);
+        /// <summary>
+        /// Remove the specified RuntimeService with the given key
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public abstract Task<bool> RemoveKeyedService(Type serviceType, object key);
+        /// <summary>
+        /// Returns true if the specified service is found
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <returns></returns>
         public Task<bool> ServiceExists<TService>() => ServiceExists(typeof(TService));
+        /// <summary>
+        /// Returns true if the specified keyed service is found
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public Task<bool> KeyedServiceExists<TService>(object key) => KeyedServiceExists(typeof(TService), key);
-        public virtual Task<bool> ServiceExists(Type serviceType)
+        /// <summary>
+        /// Returns true if the specified service is found
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <returns></returns>
+        public abstract Task<bool> ServiceExists(Type serviceType);
+        /// <summary>
+        /// Returns true if the specified keyed service is found
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public abstract Task<bool> KeyedServiceExists(Type serviceType, object key);
+        /// <summary>
+        /// Remove the specified RuntimeService
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <returns></returns>
+        public virtual Task<bool> AddService(Type serviceType)
         {
-            throw new NotImplementedException();
+            return AddService(serviceType, serviceType);
         }
-        public virtual Task<bool> KeyedServiceExists(Type serviceType, object key)
+        /// <summary>
+        /// Remove the specified RuntimeService with the given key
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public virtual Task<bool> AddKeyedService(Type serviceType, object key)
         {
-            throw new NotImplementedException();
+            return AddKeyedService(serviceType, serviceType, key);
         }
-        public virtual Task<TService> AddService<TService, TImplementation>() where TService : class
-        {
-            throw new NotImplementedException();
-        }
+        /// <summary>
+        /// Add a keyed service at runtime
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="implementationType"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public abstract Task<bool> AddKeyedService(Type serviceType, Type implementationType, object key);
         /// <summary>
         /// Add a service at runtime
         /// </summary>
-        public virtual Task<TService> AddKeyedService<TService, TImplementation>(string key) where TService : class
-        {
-            throw new NotImplementedException();
-        }
+        public abstract Task<bool> AddService(Type serviceType, Type implementationType);
         /// <summary>
         /// Add a service at runtime
         /// </summary>
         public virtual Task<bool> AddService<TService>()
         {
-            throw new NotImplementedException();
+            return AddService(typeof(TService));
         }
         /// <summary>
         /// Add a service at runtime
         /// </summary>
-        public virtual Task<bool> AddKeyedService<TService>(string key)
+        /// <typeparam name="TService"></typeparam>
+        /// <typeparam name="TImplementation"></typeparam>
+        /// <returns></returns>
+        public virtual Task<bool> AddService<TService, TImplementation>() 
         {
-            throw new NotImplementedException();
+            return AddService(typeof(TService), typeof(TImplementation));
+        }
+        /// <summary>
+        /// Add a service at runtime
+        /// </summary>
+        public virtual Task<bool> AddKeyedService<TService>(object key)
+        {
+            return AddKeyedService(typeof(TService), key);
+        }
+        /// <summary>
+        /// Add a service at runtime
+        /// </summary>
+        public virtual Task<bool> AddKeyedService<TService, TImplementation>(object key)
+        {
+            return AddKeyedService(typeof(TService), typeof(TImplementation), key);
         }
 
         #region DispatchProxy
@@ -110,22 +190,21 @@ namespace SpawnDev.BlazorJS.WebWorkers
             ServiceInterfaces[typeofT] = ret;
             return ret;
         }
-        public virtual Task<object?> CallKeyed(object key, MethodInfo methodInfo, object?[]? args = null)
-        {
-            var serializedMethodInfo = SerializableMethodInfo.SerializeMethodInfo(methodInfo);
-            var argsCount = args == null ? 0 : args.Length;
-            Console.WriteLine($"SendCall: {key} {argsCount} {serializedMethodInfo}");
-            var mi = SerializableMethodInfo.DeserializeMethodInfo(serializedMethodInfo);
-            Console.WriteLine($"SendCall: {(mi == null ? "method NOT FOUND" : "method found")}");
-            return Task.FromResult((object)"");
-        }
-        public TServiceInterface GetService<TServiceInterface>(object key) where TServiceInterface : class
+        public TServiceInterface GetKeyedService<TServiceInterface>(object key) where TServiceInterface : class
         {
             return InterfaceCallDispatcher<TServiceInterface>.CreateInterfaceDispatcher(key, CallKeyed);
         }
         #endregion
 
         #region Type, Method Name, Argument count
+        /// <summary>
+        /// Call a service method by name
+        /// </summary>
+        /// <param name="classType"></param>
+        /// <param name="methodName"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public Task<object?> Call(Type classType, string methodName, object?[]? args = null)
         {
             var parameterCount = args == null ? 0 : args.Length;
@@ -139,26 +218,50 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 throw new Exception($"Method not found: {classType.Name} {methodName} {parameterCount}");
             }
-            return Call(methodInfo, args);
+            return Call(classType, methodInfo, args);
         }
+        /// <summary>
+        /// Call a service method using service class name and method name
+        /// </summary>
+        /// <param name="className"></param>
+        /// <param name="methodName"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public Task<object?> Call(string className, string methodName, object?[]? args = null)
         {
             var classType = TypeExtensions.GetType(className);
             if (classType == null) throw new Exception($"Class Type not found: {className}");
             return Call(classType, methodName, args);
         }
+        /// <summary>
+        /// Call the method with the specified name on service type TClass
+        /// </summary>
+        /// <typeparam name="TClass"></typeparam>
+        /// <param name="methodName"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
         public Task<object?> Call<TClass>(string methodName, object?[]? args = null) => Call(typeof(TClass), methodName, args);
         public async Task<TResult> Call<TClass, TResult>(string methodName, object?[]? args = null) => (TResult)await Call(typeof(TClass), methodName, args);
         #endregion
 
         #region Expressions
-        protected Task<object?> CallKeyed(object key, Expression expr, object?[]? argsExt = null)
+        /// <summary>
+        /// Call call a keyed service method usign an expression
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <param name="argsExt"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        protected Task<object?> CallKeyed(Type serviceType, object key, Expression expr, object?[]? argsExt = null)
         {
             if (expr is MethodCallExpression methodCallExpression)
             {
                 var methodInfo = methodCallExpression.Method;
                 var args = methodCallExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
-                return CallKeyed(key, methodInfo, args);
+                return CallKeyed(serviceType, key, methodInfo, args);
             }
             else if (expr is MemberExpression memberExpression)
             {
@@ -172,7 +275,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         {
                             throw new Exception("Property getter does not exist.");
                         }
-                        return CallKeyed(key, methodInfo);
+                        return CallKeyed(serviceType, key, methodInfo);
                     }
                     else if (memberExpression.Member is FieldInfo fieldInfo)
                     {
@@ -190,7 +293,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         {
                             throw new Exception("Property setter does not exist.");
                         }
-                        return CallKeyed(key, methodInfo, argsExt);
+                        return CallKeyed(serviceType, key, methodInfo, argsExt);
                     }
                     else if (memberExpression.Member is FieldInfo fieldInfo)
                     {
@@ -212,13 +315,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="argsExt"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        protected Task<object?> Call(Expression expr, object?[]? argsExt = null)
+        protected Task<object?> CallStatic(Expression expr, object?[]? argsExt = null)
         {
             if (expr is MethodCallExpression methodCallExpression)
             {
                 var methodInfo = methodCallExpression.Method;
+                var serviceType = methodInfo.ReflectedType;
                 var args = methodCallExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
-                return Call(methodInfo, args);
+                return Call(serviceType, methodInfo, args);
             }
             else if (expr is MemberExpression memberExpression)
             {
@@ -232,7 +336,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         {
                             throw new Exception("Property getter does not exist.");
                         }
-                        return Call(methodInfo);
+                        var serviceType = methodInfo.ReflectedType;
+                        return Call(serviceType, methodInfo);
                     }
                     else if (memberExpression.Member is FieldInfo fieldInfo)
                     {
@@ -250,7 +355,72 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         {
                             throw new Exception("Property setter does not exist.");
                         }
-                        return Call(methodInfo, argsExt);
+                        var serviceType = methodInfo.ReflectedType;
+                        return Call(serviceType, methodInfo, argsExt);
+                    }
+                    else if (memberExpression.Member is FieldInfo fieldInfo)
+                    {
+                        throw new Exception("Fields are not supported. Properties are supported.");
+                    }
+                    throw new Exception("Property setter does not exist.");
+                }
+            }
+            else if (expr is NewExpression newExpression)
+            {
+                throw new Exception("Run does not support constructors. Use New()");
+            }
+            else
+            {
+                throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
+            }
+        }
+        /// <summary>
+        /// Converts an Expression into a MethodInfo and a call arguments array<br />
+        /// Then calls DispatchCall with them
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <param name="argsExt"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        protected Task<object?> Call(Type serviceType, Expression expr, object?[]? argsExt = null)
+        {
+            if (expr is MethodCallExpression methodCallExpression)
+            {
+                var methodInfo = methodCallExpression.Method;
+                var args = methodCallExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
+                return Call(serviceType, methodInfo, args);
+            }
+            else if (expr is MemberExpression memberExpression)
+            {
+                if (argsExt == null || argsExt.Length == 0)
+                {
+                    // get call
+                    if (memberExpression.Member is PropertyInfo propertyInfo)
+                    {
+                        var methodInfo = propertyInfo.GetMethod;
+                        if (methodInfo == null)
+                        {
+                            throw new Exception("Property getter does not exist.");
+                        }
+                        return Call(serviceType, methodInfo);
+                    }
+                    else if (memberExpression.Member is FieldInfo fieldInfo)
+                    {
+                        throw new Exception("Fields are not supported. Properties are supported.");
+                    }
+                    throw new Exception("Property getter does not exist.");
+                }
+                else
+                {
+                    // set call
+                    if (memberExpression.Member is PropertyInfo propertyInfo)
+                    {
+                        var methodInfo = propertyInfo.SetMethod;
+                        if (methodInfo == null)
+                        {
+                            throw new Exception("Property setter does not exist.");
+                        }
+                        return Call(serviceType, methodInfo, argsExt);
                     }
                     else if (memberExpression.Member is FieldInfo fieldInfo)
                     {
@@ -278,7 +448,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     var implementationType = constructorInfo.ReflectedType;
                     serviceType ??= implementationType;
                     var args = newExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
-                    return Create(constructorInfo, serviceType, args);
+                    return CreateService(constructorInfo, serviceType, args);
                 }
                 throw new Exception("Constructor does not exist.");
             }
@@ -297,7 +467,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     var implementationType = constructorInfo.ReflectedType;
                     serviceType ??= implementationType;
                     var args = newExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
-                    return CreateKeyed(constructorInfo, serviceType, serviceKey, args);
+                    return CreateKeyedService(constructorInfo, serviceType, serviceKey, args);
                 }
                 throw new Exception("Constructor does not exist.");
             }
@@ -308,81 +478,229 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
 
         // Create instance
-        public Task New(string serviceKey, Expression<Func<object>> expr) => CreateKeyed(expr.Body, serviceKey, null);
-        public Task New<TService>(string serviceKey, Expression<Func<TService>> expr) => CreateKeyed(expr.Body, serviceKey, typeof(TService));
+        /// <summary>
+        /// Create a new runtime keyed service
+        /// </summary>
+        /// <param name="serviceKey"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public Task New(object serviceKey, Expression<Func<object>> expr) => CreateKeyed(expr.Body, serviceKey, null);
+        /// <summary>
+        /// Create a new runtime keyed service
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <param name="serviceKey"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public Task New<TService>(object serviceKey, Expression<Func<TService>> expr) => CreateKeyed(expr.Body, serviceKey, typeof(TService));
+        /// <summary>
+        /// Create a new runtime service
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <returns></returns>
         public Task New(Expression<Func<object>> expr) => Create(expr.Body, null);
+        /// <summary>
+        /// Create a new runtime service
+        /// </summary>
+        /// <typeparam name="TService"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
         public Task New<TService>(Expression<Func<TService>> expr) => Create(expr.Body, typeof(TService));
         #region Non-Keyed
 
         // Static
         // Method Calls and Property Getters
         // Action
-        public async Task Run(Expression<Action> expr) => await Call(expr.Body);
+        /// <summary>
+        /// Call a method or get the value of a property
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run(Expression<Action> expr) => await CallStatic(expr.Body);
         // Func<Task>
-        public async Task Run(Expression<Func<Task>> expr) => await Call(expr.Body);
+        /// <summary>
+        /// Call a method or get the value of a property
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run(Expression<Func<Task>> expr) => await CallStatic(expr.Body);
         // Func<ValueTask>
-        public async Task Run(Expression<Func<ValueTask>> expr) => await Call(expr.Body);
+        /// <summary>
+        /// Call a method or get the value of a property
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run(Expression<Func<ValueTask>> expr) => await CallStatic(expr.Body);
         // Func<...,TResult>
-        public async Task<TResult> Run<TResult>(Expression<Func<TResult>> expr) => (TResult)await Call(expr.Body);
+        /// <summary>
+        /// Call a method or get the value of a property
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TResult>(Expression<Func<TResult>> expr) => (TResult)await CallStatic(expr.Body);
         // Func<...,Task<TResult>>
-        public async Task<TResult> Run<TResult>(Expression<Func<Task<TResult>>> expr) => (TResult)await Call(expr.Body);
+        /// <summary>
+        /// Call a method or get the value of a property
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TResult>(Expression<Func<Task<TResult>>> expr) => (TResult)await CallStatic(expr.Body);
         // Func<...,ValueTask<TResult>>
-        public async Task<TResult> Run<TResult>(Expression<Func<ValueTask<TResult>>> expr) => (TResult)await Call(expr.Body);
+        /// <summary>
+        /// Call a method or get the value of a property
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TResult>(Expression<Func<ValueTask<TResult>>> expr) => (TResult)await CallStatic(expr.Body);
         // Property set
-        public async Task Set<TProperty>(Expression<Func<TProperty>> expr, TProperty value) => await Call(expr.Body, new object[] { value });
+        /// <summary>
+        /// Set a property value
+        /// </summary>
+        /// <typeparam name="TProperty"></typeparam>
+        /// <param name="expr"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public async Task Set<TProperty>(Expression<Func<TProperty>> expr, TProperty value) => await CallStatic(expr.Body, new object[] { value });
 
         // Instance
         // Method Calls and Property Getters
         // Action
-        public async Task Run<TInstance>(Expression<Action<TInstance>> expr) => await Call(expr.Body);
+        /// <summary>
+        /// Call a service method or get the value of a service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run<TInstance>(Expression<Action<TInstance>> expr) => await Call(typeof(TInstance), expr.Body);
         // Func<Task>
-        public async Task Run<TInstance>(Expression<Func<TInstance, Task>> expr) => await Call(expr.Body);
+        /// <summary>
+        /// Call a service method or get the value of a service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run<TInstance>(Expression<Func<TInstance, Task>> expr) => await Call(typeof(TInstance), expr.Body);
         // Func<ValueTask>
-        public async Task Run<TInstance>(Expression<Func<TInstance, ValueTask>> expr) => await Call(expr.Body);
+        /// <summary>
+        /// Call a service method or get the value of a service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run<TInstance>(Expression<Func<TInstance, ValueTask>> expr) => await Call(typeof(TInstance), expr.Body);
         // Func<...,TResult>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, TResult>> expr) => (TResult)await Call(expr.Body);
+        /// <summary>
+        /// Call a service method or get the value of a service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, TResult>> expr) => (TResult)await Call(typeof(TInstance), expr.Body);
         // Func<...,Task<TResult>>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await Call(expr.Body);
+        /// <summary>
+        /// Call a service method or get the value of a service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await Call(typeof(TInstance), expr.Body);
         // Func<...,ValueTask<TResult>>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await Call(expr.Body);
+        /// <summary>
+        /// Call a service method or get the value of a service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await Call(typeof(TInstance), expr.Body);
         // Property set
-        public async Task Set<TInstance, TProperty>(Expression<Func<TInstance, TProperty>> expr, TProperty value) => await Call(expr.Body, new object[] { value });
+        /// <summary>
+        /// Set a service property value
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TProperty"></typeparam>
+        /// <param name="expr"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public async Task Set<TInstance, TProperty>(Expression<Func<TInstance, TProperty>> expr, TProperty value) => await Call(typeof(TInstance), expr.Body, new object[] { value });
         #endregion
         #region Keyed
 
-        // Static
-        // Method Calls and Property Getters
-        // Action
-        public async Task Run(object key, Expression<Action> expr) => await CallKeyed(key, expr.Body);
-        // Func<Task>
-        public async Task Run(object key, Expression<Func<Task>> expr) => await CallKeyed(key, expr.Body);
-        // Func<ValueTask>
-        public async Task Run(object key, Expression<Func<ValueTask>> expr) => await CallKeyed(key, expr.Body);
-        // Func<...,TResult>
-        public async Task<TResult> Run<TResult>(object key, Expression<Func<TResult>> expr) => (TResult)await CallKeyed(key, expr.Body);
-        // Func<...,Task<TResult>>
-        public async Task<TResult> Run<TResult>(object key, Expression<Func<Task<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
-        // Func<...,ValueTask<TResult>>
-        public async Task<TResult> Run<TResult>(object key, Expression<Func<ValueTask<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
-        // Property set
-        public async Task Set<TProperty>(object key, Expression<Func<TProperty>> expr, TProperty value) => await CallKeyed(key, expr.Body, new object[] { value });
-
         // Instance
         // Method Calls and Property Getters
         // Action
-        public async Task Run<TInstance>(object key, Expression<Action<TInstance>> expr) => await CallKeyed(key, expr.Body);
+        /// <summary>
+        /// Call a keyed service method or get the value of a keyed service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run<TInstance>(object key, Expression<Action<TInstance>> expr) => await CallKeyed(typeof(TInstance), key, expr.Body);
         // Func<Task>
-        public async Task Run<TInstance>(object key, Expression<Func<TInstance, Task>> expr) => await CallKeyed(key, expr.Body);
+        /// <summary>
+        /// Call a keyed service method or get the value of a keyed service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run<TInstance>(object key, Expression<Func<TInstance, Task>> expr) => await CallKeyed(typeof(TInstance), key, expr.Body);
         // Func<ValueTask>
-        public async Task Run<TInstance>(object key, Expression<Func<TInstance, ValueTask>> expr) => await CallKeyed(key, expr.Body);
+        /// <summary>
+        /// Call a keyed service method or get the value of a keyed service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task Run<TInstance>(object key, Expression<Func<TInstance, ValueTask>> expr) => await CallKeyed(typeof(TInstance), key, expr.Body);
         // Func<...,TResult>
-        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, TResult>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        /// <summary>
+        /// Call a keyed service method or get the value of a keyed service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, TResult>> expr) => (TResult)await CallKeyed(typeof(TInstance), key, expr.Body);
         // Func<...,Task<TResult>>
-        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        /// <summary>
+        /// Call a keyed service method or get the value of a keyed service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await CallKeyed(typeof(TInstance), key, expr.Body);
         // Func<...,ValueTask<TResult>>
-        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await CallKeyed(key, expr.Body);
+        /// <summary>
+        /// Call a keyed service method or get the value of a keyed service property
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <returns></returns>
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await CallKeyed(typeof(TInstance), key, expr.Body);
         // Property set
-        public async Task Set<TInstance, TProperty>(object key, Expression<Func<TInstance, TProperty>> expr, TProperty value) => await CallKeyed(key, expr.Body, new object[] { value });
+        /// <summary>
+        /// Set a keyed service property value
+        /// </summary>
+        /// <typeparam name="TInstance"></typeparam>
+        /// <typeparam name="TProperty"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="expr"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public async Task Set<TInstance, TProperty>(object key, Expression<Func<TInstance, TProperty>> expr, TProperty value) => await CallKeyed(typeof(TInstance), key, expr.Body, new object[] { value });
         #endregion
         #endregion
 
@@ -411,7 +729,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
         #region Delegates
         protected virtual Task<object?> DispatchCall(Delegate methodDelegate, object?[]? args = null)
         {
-            return Call(methodDelegate.Method, args);
+            var methodInfo = methodDelegate.Method;
+            var serviceType = methodInfo.ReflectedType;
+            return Call(serviceType, methodInfo, args);
         }
 
         // Action

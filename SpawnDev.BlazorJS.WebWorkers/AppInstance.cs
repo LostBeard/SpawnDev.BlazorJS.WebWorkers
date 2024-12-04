@@ -40,10 +40,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 return _Dispatcher;
             }
         }
-        public override Task<object?> Call(MethodInfo methodInfo, object?[]? args = null)
-        {
-            return Dispatcher!.Call(methodInfo, args);
-        }
         internal AppInstance(WebWorkerService webWorkerService, AppInstanceInfo info)
         {
             WebWorkerService = webWorkerService;
@@ -179,6 +175,46 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
             }
             WebWorkerService = null;
+        }
+        public override Task<object?> Call(Type serviceType, MethodInfo methodInfo, object?[]? args = null)
+        {
+            return Dispatcher!.Call(serviceType, methodInfo, args);
+        }
+        public override Task<object?> CallKeyed(Type serviceType, object serviceKey, MethodInfo methodInfo, object?[]? args = null)
+        {
+            return Dispatcher!.CallKeyed(serviceType, serviceKey, methodInfo, args);
+        }
+        public override Task CreateService(ConstructorInfo constructorInfo, Type? serviceType, object[]? args)
+        {
+            return Dispatcher!.CreateService(constructorInfo, serviceType, args);
+        }
+        public override Task CreateKeyedService(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
+        {
+            return Dispatcher!.CreateKeyedService(constructorInfo, serviceType, serviceKey, args);
+        }
+        public override Task<bool> RemoveKeyedService(Type serviceType, object key)
+        {
+            return Dispatcher!.RemoveKeyedService(serviceType, key);
+        }
+        public override Task<bool> RemoveService(Type serviceType)
+        {
+            return Dispatcher!.RemoveService(serviceType);
+        }
+        public override Task<bool> KeyedServiceExists(Type serviceType, object key)
+        {
+            return Dispatcher!.KeyedServiceExists(serviceType, key);
+        }
+        public override Task<bool> ServiceExists(Type serviceType)
+        {
+            return Dispatcher!.ServiceExists(serviceType);
+        }
+        public override Task<bool> AddKeyedService(Type serviceType, Type implementationType, object key)
+        {
+            return Dispatcher!.AddKeyedService(serviceType, implementationType, key);
+        }
+        public override Task<bool> AddService(Type serviceType, Type implementationType)
+        {
+            return Dispatcher!.AddService(serviceType, implementationType);
         }
     }
 }

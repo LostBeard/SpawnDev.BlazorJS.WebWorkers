@@ -95,11 +95,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// override to handle CallDispatcher calls. Calls the MethodInfo on an available WebWorker or on this scope if none can be created
         /// </summary>
+        /// <param name="serviceType"></param>
         /// <param name="methodInfo"></param>
         /// <param name="args"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public override async Task<object?> Call(MethodInfo methodInfo, object?[]? args = null)
+        public override async Task<object?> Call(Type serviceType, MethodInfo methodInfo, object?[]? args = null)
         {
             ServiceCallDispatcher? dispatcher = null;
             bool shouldRelease = false;
@@ -119,7 +120,46 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     throw new Exception($"Failed to run task.");
                 }
-                return await dispatcher.Call(methodInfo, args);
+                return await dispatcher.Call(serviceType, methodInfo, args);
+            }
+            finally
+            {
+                if (shouldRelease)
+                {
+                    dispatcher?.ReleaseLock();
+                }
+            }
+        }
+        /// <summary>
+        /// override to handle CallDispatcher calls. Calls the MethodInfo on an available WebWorker or on this scope if none can be created
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="serviceKey"></param>
+        /// <param name="methodInfo"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public override async Task<object?> CallKeyed(Type serviceType, object serviceKey, MethodInfo methodInfo, object?[]? args = null)
+        {
+            ServiceCallDispatcher? dispatcher = null;
+            bool shouldRelease = false;
+            try
+            {
+                if (Supported)
+                {
+                    dispatcher = await GetWorkerAsync();
+                    shouldRelease = true;
+                }
+                else if (FallbackToLocalScope)
+                {
+                    // fallback to the local scope
+                    dispatcher = WebWorkerService.Local;
+                }
+                if (dispatcher == null)
+                {
+                    throw new Exception($"Failed to run task.");
+                }
+                return await dispatcher.CallKeyed(serviceType, serviceKey, methodInfo, args);
             }
             finally
             {
@@ -412,6 +452,38 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     DisposeWorker(w);
                 }
             }
+        }
+        public override Task CreateService(ConstructorInfo constructorInfo, Type? serviceType, object[]? args)
+        {
+            throw new NotImplementedException();
+        }
+        public override Task CreateKeyedService(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
+        {
+            throw new NotImplementedException();
+        }
+        public override Task<bool> RemoveService(Type serviceType)
+        {
+            throw new NotImplementedException();
+        }
+        public override Task<bool> RemoveKeyedService(Type serviceType, object key)
+        {
+            throw new NotImplementedException();
+        }
+        public override Task<bool> ServiceExists(Type serviceType)
+        {
+            throw new NotImplementedException();
+        }
+        public override Task<bool> KeyedServiceExists(Type serviceType, object key)
+        {
+            throw new NotImplementedException();
+        }
+        public override Task<bool> AddKeyedService(Type serviceType, Type implementationType, object key)
+        {
+            throw new NotImplementedException();
+        }
+        public override Task<bool> AddService(Type serviceType, Type implementationType)
+        {
+            throw new NotImplementedException();
         }
         ~WebWorkerPool()
         {
