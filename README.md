@@ -139,10 +139,10 @@ Version 2.5.20 added support for keyed services, adding and removing services at
 - Supports calling private methods from inside the owning class.
 
 #### Expression examples
-- Set instance property value using Set<TService, TReturn>()  
+- Set instance property value using Set<TService, TProperty>()  
 `await worker.Set<SomeService, string>(someService => someService.SomeProperty, "new property value");`  
 
-- Get instance property value using Run<TService, TReturn>()  
+- Get instance property value using Run<TService, TProperty>()  
 `var propertyValue = await worker.Run<SomeService, string>(someService => someService.SomeProperty);`  
 
 - Call instance method using Run<TService, TReturn>()   
