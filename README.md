@@ -139,19 +139,19 @@ Version 2.5.20 added support for keyed services, adding and removing services at
 - Supports calling private methods from inside the owning class.
 
 #### Expression examples
-- Property Set value using Set\<TService, TProperty\>()  
+- Property Set value using `Set<TService, TProperty>()`  
 `await worker.Set<SomeService, string>(someService => someService.SomeProperty, "new property value");`  
 
-- Property Get value using Run\<TService, TProperty\>()  
+- Property Get value using `Run<TService, TProperty>()`  
 `var propertyValue = await worker.Run<SomeService, string>(someService => someService.SomeProperty);`  
 
-- Method Call using Run<TService, TReturn>()   
+- Method Call using `Run<TService, TReturn>()`   
 `var methodReturnValue = await worker.Run<SomeService, string>(someService => someService.SomeMethod("some data"));`  
 
-- Create a new instance of a class using New() and register it as a service   
+- Create a new instance of a class using `New()` and register it as a service   
 `await worker.New(() => new SomeClass("some init var"))`  
 
-- Create a new instance of a class using New\<TService\>() and specify the service Type to register it as  
+- Create a new instance of a class using `New<TService>()` and specify the service Type to register it as  
 `await worker.New<ISomeClass>(() => new SomeClass("some init var"))`  
 
 **Delegates** - Invoke()  
