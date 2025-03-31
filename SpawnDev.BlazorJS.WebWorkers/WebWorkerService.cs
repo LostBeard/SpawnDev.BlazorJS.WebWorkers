@@ -388,6 +388,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
         }
         /// <summary>
+        /// The updatefound event of the ServiceWorkerRegistration interface is fired any time the ServiceWorkerRegistration.installing property acquires a new service worker.
+        /// </summary>
+        public event Action OnServiceWorkerUpdateFound;
+        /// <summary>
         /// This event fires if this instance is running in a WebWorker when the connection to the parent has been established
         /// </summary>
         public event Action OnDedicatedWorkerParentReady;
@@ -501,13 +505,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         private static readonly string IdentPrefix = $"{nameof(AppInstanceInfo)}:";
         private string GetName()
-        {
-            if (JS.WindowThis != null) return JS.WindowThis.Name ?? "";
-            if (JS.DedicateWorkerThis != null) return JS.DedicateWorkerThis.Name ?? "";
-            if (JS.SharedWorkerThis != null) return JS.SharedWorkerThis.Name ?? "";
-            return "";
-        }
-        private string GetParentInstanceId()
         {
             if (JS.WindowThis != null) return JS.WindowThis.Name ?? "";
             if (JS.DedicateWorkerThis != null) return JS.DedicateWorkerThis.Name ?? "";
@@ -659,7 +656,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     workerUrl += $"?{queryStr}";
                 }
                 using var registration = await serviceWorker.Register(workerUrl, ServiceWorkerConfig.Options);
+                registration.OnUpdateFound += ServiceWorker_OnUpdateFound;
             }
+        }
+        void ServiceWorker_OnUpdateFound()
+        {
+            OnServiceWorkerUpdateFound?.Invoke();
         }
         /// <summary>
         /// Unregisters a registered service worker
