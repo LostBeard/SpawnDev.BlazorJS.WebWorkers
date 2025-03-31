@@ -388,6 +388,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
         }
         /// <summary>
+        /// Fired after the service worker registration finishes successfully
+        /// </summary>
+        public event Action<ServiceWorkerRegistration> OnServiceWorkerRegistered;
+        /// <summary>
         /// The updatefound event of the ServiceWorkerRegistration interface is fired any time the ServiceWorkerRegistration.installing property acquires a new service worker.
         /// </summary>
         public event Action OnServiceWorkerUpdateFound;
@@ -656,6 +660,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     workerUrl += $"?{queryStr}";
                 }
                 using var registration = await serviceWorker.Register(workerUrl, ServiceWorkerConfig.Options);
+                OnServiceWorkerRegistered?.Invoke(registration);
                 registration.OnUpdateFound += ServiceWorker_OnUpdateFound;
             }
         }
