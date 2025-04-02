@@ -634,8 +634,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     ServiceWorkerConfig.ScriptURL = WebWorkerJSScript;
                 }
-                using var navigator = JS.WindowThis.Navigator;
-                using var serviceWorker = navigator.ServiceWorker;
                 var kvps = new Dictionary<string, string>();
                 if (ServiceWorkerConfig.ImportServiceWorkerAssets)
                 {
@@ -659,11 +657,27 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     workerUrl += $"?{queryStr}";
                 }
-                using var registration = await serviceWorker.Register(workerUrl, ServiceWorkerConfig.Options);
-                OnServiceWorkerRegistered?.Invoke(registration);
-                registration.OnUpdateFound += ServiceWorker_OnUpdateFound;
+                using var navigator = JS.Get<Navigator>("navigator");
+                using var serviceWorkerContainer = navigator.ServiceWorker;
+                var serviceWorkerRegistration = await serviceWorkerContainer.Register(workerUrl, ServiceWorkerConfig.Options);
+                ServiceWorkerChanged(serviceWorkerRegistration);
             }
         }
+        void ServiceWorkerChanged(ServiceWorkerRegistration serviceWorkerRegistration)
+        {
+            if (serviceWorkerRegistration == null) return;
+            if (ActiveServiceWorkerRegistration != null)
+            {
+                ActiveServiceWorkerRegistration.OnUpdateFound -= ServiceWorker_OnUpdateFound;
+            }
+            ActiveServiceWorkerRegistration = serviceWorkerRegistration;
+            ActiveServiceWorkerRegistration.OnUpdateFound += ServiceWorker_OnUpdateFound;
+            OnServiceWorkerRegistered?.Invoke(ActiveServiceWorkerRegistration);
+        }
+        /// <summary>
+        /// Returns the active ServiceWorkerRegistration if one has been registered using the WebWorkerService RegisterServiceWorker method.
+        /// </summary>
+        public ServiceWorkerRegistration? ActiveServiceWorkerRegistration { get; private set; }
         void ServiceWorker_OnUpdateFound()
         {
             OnServiceWorkerUpdateFound?.Invoke();
