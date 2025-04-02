@@ -906,7 +906,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 // use client.openWindow
                 // this only works in specific circumstances 
                 // typically used inside a notifiction click event in a service worker
-                using var window = JS.ServiceWorkerThis!.Clients.OpenWindow(newWindowUrl);
+                using var window = await JS.ServiceWorkerThis!.Clients.OpenWindow(newWindowUrl);
             }
             var tcs = new TaskCompletionSource<AppInstance?>();
             var task = tcs.Task;
