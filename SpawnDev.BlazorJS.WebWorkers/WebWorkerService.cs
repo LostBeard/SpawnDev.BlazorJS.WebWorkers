@@ -898,7 +898,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 // running in a window
                 // use window.open
-                using var window = JS.WindowThis!.Open(newWindowUrl);
+                using var window = JS.WindowThis!.Open(newWindowUrl, target, windowFeatures);
             }
             else if (JS.ServiceWorkerThis != null)
             {
