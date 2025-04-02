@@ -2,12 +2,45 @@
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
+    ///// <summary>
+    ///// Configuration data with information a new instance will use on startup
+    ///// </summary>
+    //public class InstanceConfiguration
+    //{
+    //    /// <summary>
+    //    /// The configuration id of this instance
+    //    /// </summary>
+    //    public string ConfigId { get; set; }
+    //    /// <summary>
+    //    /// The InstanceId of the instance that created this config
+    //    /// </summary>
+    //    public string OwnerId { get; set; }
+    //    /// <summary>
+    //    /// When this config was created
+    //    /// </summary>
+    //    public DateTimeOffset Created { get; set; }
+    //    /// <summary>
+    //    /// The path to load
+    //    /// </summary>
+    //    public string? Url { get; set; }
+    //}
+    /// <summary>
+    /// Information about an instance of a Blazor app
+    /// </summary>
     public class AppInstanceInfo
     {
         /// <summary>
         /// The instance's instanceId, a unique and randomly generated Guid string created during BlazorJSRuntime startup 
         /// </summary>
         public string InstanceId { get; set; }
+        /// <summary>
+        /// The InstanceId of the instance that created this instance (if one)
+        /// </summary>
+        public string? OwnerId { get; set; }
+        /// <summary>
+        /// The id set by the owner (OwnerId) when they created this instance
+        /// </summary>
+        public string? ChildId { get; set; }
         /// <summary>
         /// The instance's location at startup
         /// </summary>

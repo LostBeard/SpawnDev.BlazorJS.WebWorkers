@@ -16,12 +16,12 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 var host = await builder.Build().StartBackgroundServices();
 
 
-var arg = new SharedCancellationTokenSource();
-var token = arg.Token;
+//var arg = new SharedCancellationTokenSource();
+//var token = arg.Token;
 
-JS.Set("_token1", token);
-var token12 = JS.Get<JSObject>("_token1");
-var keys = token12.JSRef?.Keys();
-var token1 = JS.Get<SharedCancellationToken>("_token1");
+//JS.Set("_token1", token);
+//var token12 = JS.Get<JSObject>("_token1");
+//var keys = token12.JSRef?.Keys();
+//var token1 = JS.Get<SharedCancellationToken>("_token1");
 
 await host.BlazorJSRunAsync();

@@ -15,6 +15,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// </summary>
     public class WebWorkerService : IDisposable, IAsyncBackgroundService
     {
+        const string instanceOwnerIdKey = "instanceOwnerIdKey";
+        const string childIdKey = "tempIdKey";
         /// <summary>
         /// Completes successfully when asynchronous initialization has completed
         /// </summary>
@@ -148,16 +150,19 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// IWebAssemblyServices singleton
         /// </summary>
         public IWebAssemblyServices WebAssemblyServices { get; init; }
+
+        NavigationManager NavigationManager;
         /// <summary>
         /// Creates a new instance of WebWorkerService
         /// </summary>
         /// <param name="webAssemblyServices"></param>
         /// <param name="js"></param>
-        public WebWorkerService(IWebAssemblyServices webAssemblyServices, BlazorJSRuntime js)
+        public WebWorkerService(IWebAssemblyServices webAssemblyServices, BlazorJSRuntime js, NavigationManager navigationManager)
         {
             JS = js;
             GlobalScope = JS.GlobalScope;
             InstanceId = JS.InstanceId;
+            NavigationManager = navigationManager;
             WebAssemblyServices = webAssemblyServices;
             ServiceProvider = WebAssemblyServices.Services;
             ServiceDescriptors = WebAssemblyServices.Descriptors;
@@ -168,14 +173,29 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 ServiceWorkerSupported = !JS.IsUndefined("ServiceWorkerRegistration");
                 AppBaseUri = JS.Get<string>("document.baseURI");
                 var locationHref = JS.Get<string>("location.href");
+                var locationUri = new Uri(locationHref);
                 var workerScriptUri = new Uri(new Uri(AppBaseUri), WebWorkerJSScript);
                 WebWorkerJSScript = workerScriptUri.ToString();
                 Locks = JS.Get<LockManager>("navigator.locks");
                 LockManagerSupported = Locks != null;
-                var queryParams = HttpUtility.ParseQueryString(new Uri(locationHref).Query);
+                var queryParams = HttpUtility.ParseQueryString(locationUri.Query);
                 var isTaskPoolWorker = queryParams["taskPool"] == "1" && JS.IsScope(GlobalScope.DedicatedAndSharedWorkers);
+                var instanceOwnerId = queryParams[instanceOwnerIdKey];
+                var instanceChildId = queryParams[childIdKey];
+                if (!string.IsNullOrEmpty(instanceOwnerId) && !string.IsNullOrEmpty(instanceChildId))
+                {
+                    queryParams.Remove(childIdKey);
+                    queryParams.Remove(instanceOwnerIdKey);
+                    locationHref = locationUri.GetLeftPart(UriPartial.Path) + (queryParams.Count == 0 ? "" : "?" + queryParams.ToString());
+                    locationUri = new Uri(locationHref);
+                    var newPath = NavigationManager.ToBaseRelativePath(locationHref);
+                    // remove the instanceOwnerIdKey attribute from the url
+                    NavigationManager.NavigateTo(newPath, false, true);
+                }
                 Info = new AppInstanceInfo
                 {
+                    OwnerId = instanceOwnerId,
+                    ChildId = instanceChildId,
                     InstanceId = InstanceId,
                     Scope = GlobalScope,
                     Name = GetName(),
@@ -208,7 +228,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 if (IServiceCollectionExtensions.ServiceWorkerConfig != null)
                 {
                     ServiceWorkerConfig = IServiceCollectionExtensions.ServiceWorkerConfig;
-                };
+                }
+                ;
                 if (ServiceWorkerConfig == null) ServiceWorkerConfig = new ServiceWorkerConfig { Register = ServiceWorkerStartupRegistration.None };
                 if (string.IsNullOrEmpty(ServiceWorkerConfig.ScriptURL))
                 {
@@ -457,12 +478,27 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     // TODO
                     // fallback termination detection
+                    // most relatively recent browsers support locks.
+                    // if needed, can test with old version of Safari on macOS as they do not support locks
+                }
+            }
+            if (instance.Info.OwnerId == InstanceId && !string.IsNullOrEmpty(instance.Info.ChildId))
+            {
+                // this instance created 'instance'
+                if (OpenWindowWaiters.TryGetValue(instance.Info.ChildId, out var openWindowWaiters))
+                {
+                    OpenWindowWaiters.Remove(instance.Info.ChildId);
+                    openWindowWaiters(instance);
                 }
             }
             OnInstanceFound?.Invoke(instance);
             if (fireChangedEvent) OnInstancesChanged?.Invoke();
             return true;
         }
+
+        Dictionary<string, Action<AppInstance>> OpenWindowWaiters = new Dictionary<string, Action<AppInstance>>();
+
+
         /// <summary>
         /// Returns information about running instances using locks to obtain it
         /// </summary>
@@ -540,6 +576,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         case ServiceWorkerStartupRegistration.Unregister:
                             await UnregisterServiceWorker();
                             break;
+                    }
+                    if (!string.IsNullOrEmpty(Info.OwnerId) && !string.IsNullOrEmpty(Info.ChildId))
+                    {
+                        // this window is owned by another instance
+                        // todo I guess nothing really, it knows when this winow is started and is ready
+                        // could load Info.Url if it is set
                     }
                 }
                 else if (JS.GlobalThis is DedicatedWorkerGlobalScope workerGlobalScope)
@@ -726,7 +768,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
             return webWorker;
         }
         /// <summary>
-        /// Creates a new a WebWorker instance and returns.
+        /// Creates a new a WebWorker instance and returns.<br/>
+        /// The property WhenReady will complete when Blazor is loaded and ready in the worker
         /// </summary>
         /// <returns></returns>
         public WebWorker? GetWebWorkerSync(Dictionary<string, string>? queryParams = null)
@@ -776,7 +819,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
             return sharedWebWorker;
         }
         /// <summary>
-        /// Returns a new SharedWebWorker instance. If a SharedWorker already existed by this name SharedWebWorker will be connected to that instance.
+        /// Returns a new SharedWebWorker instance. If a SharedWorker already existed by this name SharedWebWorker will be connected to that instance.<br/>
+        /// The property WhenReady will complete when Blazor is loaded and ready in the worker
         /// </summary>
         /// <param name="sharedWorkerName"></param>
         /// <returns></returns>
@@ -817,6 +861,90 @@ namespace SpawnDev.BlazorJS.WebWorkers
             incomingPort.Start();
             SharedWorkerIncomingConnections.Add(incomingHandler);
             incomingHandler.SendReadyFlag();
+        }
+        /// <summary>
+        /// Tries to open a new window instance with the given url (must be a path in this app)<br/>
+        /// </summary>
+        /// <param name="path">Optional relative path to your app's base path.</param>
+        /// <param name="target">
+        /// A string, without whitespace, specifying the name of the browsing context the resource is being loaded into. If the name doesn't identify an existing context, a new context is created and given the specified name. The special target keywords, _self, _blank (default), _parent, _top, and _unfencedTop can also be used. _unfencedTop is only relevant to fenced frames.<br/>
+        /// This parameter is ignored if not running in a window scope
+        /// </param>
+        /// <param name="windowFeatures">
+        /// A string containing a comma-separated list of window features in the form name=value. Boolean values can be set to true using one of: name, name=yes, name=true, or name=n where n is any non-zero integer. These features include options such as the window's default size and position, whether or not to open a minimal popup window, and so forth.<br/>
+        /// This parameter is ignored if not running in a window scope
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Can be used to cancel waiting for the window opening<br/>
+        /// The default timeout is 20 seconds
+        /// </param>
+        /// <returns></returns>
+        public async Task<AppInstance?> OpenWindow(string? path = null, string? target = null, string? windowFeatures = null, CancellationToken cancellationToken = default)
+        {
+            AppInstance? ret = null;
+            if (!JS.IsWindow && !JS.IsServiceWorkerGlobalScope)
+            {
+                // only works in window and service work scopes
+                return ret;
+            }
+            var childId = Guid.NewGuid().ToString();
+            var queryParams = new Dictionary<string, string>();
+            queryParams[instanceOwnerIdKey] = InstanceId;
+            queryParams[childIdKey] = childId;
+            var pathUrl = new Uri(new Uri(AppBaseUri), path ?? "");
+            var newWindowUrl = pathUrl.ToString(); ;
+            newWindowUrl += (newWindowUrl.Contains("?") ? "&" : "?") + string.Join('&', queryParams.Select(o => $"{Uri.EscapeDataString(o.Key)}={Uri.EscapeDataString(o.Value)}"));
+            if (JS.WindowThis != null)
+            {
+                // running in a window
+                // use window.open
+                using var window = JS.WindowThis!.Open(newWindowUrl);
+            }
+            else if (JS.ServiceWorkerThis != null)
+            {
+                // running in a service worker
+                // use client.openWindow
+                // this only works in specific circumstances 
+                // typically used inside a notifiction click event in a service worker
+                using var window = JS.ServiceWorkerThis!.Clients.OpenWindow(newWindowUrl);
+            }
+            var tcs = new TaskCompletionSource<AppInstance?>();
+            var task = tcs.Task;
+            // set a deault timeout if one wasn't set
+            CancellationTokenSource? cts = null;
+            if (cancellationToken == default)
+            {
+                cts = new CancellationTokenSource(20000);
+                cancellationToken = cts.Token;
+            }
+            cancellationToken.Register(() =>
+            {
+                if (task.IsCompleted) return;
+                if (OpenWindowWaiters.ContainsKey(childId))
+                {
+                    OpenWindowWaiters.Remove(childId);
+                }
+                tcs.TrySetException(new Exception("Timedout"));
+            });
+            var newInstanceHandler = new Action<AppInstance>((appInstance) =>
+            {
+                if (task.IsCompleted) return;
+                if (OpenWindowWaiters.ContainsKey(childId))
+                {
+                    OpenWindowWaiters.Remove(childId);
+                }
+                tcs.TrySetResult(appInstance);
+            });
+            OpenWindowWaiters.Add(childId, newInstanceHandler);
+            try
+            {
+                ret = await task;
+            }
+            finally
+            {
+                cts?.Dispose();
+            }
+            return ret;
         }
     }
 }

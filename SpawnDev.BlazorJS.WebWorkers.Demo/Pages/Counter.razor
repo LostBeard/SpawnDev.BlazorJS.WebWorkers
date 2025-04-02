@@ -14,7 +14,9 @@
 
 <p role="status">Current count: @currentCount</p>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-primary" @onclick="IncrementCount">Increment Count</button>
+
+<button class="btn btn-primary" @onclick="OpenNewWindow">Open New Window</button>
 
 @code {
     [Inject]
@@ -23,6 +25,12 @@
     private int currentCount = 0;
     // holds the running instance of this component, if one
     static Counter? instance = null;
+
+    async Task OpenNewWindow()
+    {
+        var window = await WebWorkerService.OpenWindow();
+        var nmt = true;
+    }
 
     // this static method can be called by other running instances
     static void SetInstanceCount(int count)
