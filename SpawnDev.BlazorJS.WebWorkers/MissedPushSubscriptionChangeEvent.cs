@@ -6,10 +6,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// <summary>
     /// An Event that was initially missed while Blazor was loading, but was held using waitUntil() so that Blazor can handle it.<br />
     /// </summary>
-    internal class MissedPushEvent : PushEvent, IMissedExtendableEvent
+    internal class MissedPushSubscriptionChangeEvent: PushSubscriptionChangeEvent, IMissedExtendableEvent
     {
         ///<inheritdoc/>
-        public MissedPushEvent(IJSInProcessObjectReference _ref) : base(_ref) { }
+        public MissedPushSubscriptionChangeEvent(IJSInProcessObjectReference _ref) : base(_ref) { }
         ///<inheritdoc/>
         public void WaitResolve() => JSRef!.CallVoid("waitResolve");
         ///<inheritdoc/>

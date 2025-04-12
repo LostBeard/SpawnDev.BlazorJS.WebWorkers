@@ -3,11 +3,14 @@ using SpawnDev.BlazorJS.JSObjects;
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
-    internal class MissedSyncEvent : SyncEvent
+    internal class MissedSyncEvent : SyncEvent, IMissedExtendableEvent
     {
+        ///<inheritdoc/>
         public MissedSyncEvent(IJSInProcessObjectReference _ref) : base(_ref) { }
-        public void WaitResolve() => JSRef.CallVoid("waitResolve");
-        public void WaitReject() => JSRef.CallVoid("waitReject");
+        ///<inheritdoc/>
+        public void WaitResolve() => JSRef!.CallVoid("waitResolve");
+        ///<inheritdoc/>
+        public void WaitReject() => JSRef!.CallVoid("waitReject");
     }
 }
 

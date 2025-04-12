@@ -82,7 +82,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         ServiceWorker_OnPush(e.JSRefMove<MissedPushEvent>());
                         break;
                     case "pushsubscriptionchange":
-                        ServiceWorker_OnPushSubscriptionChange(e.JSRefMove<PushSubscriptionChangeEvent>());
+                        ServiceWorker_OnPushSubscriptionChange(e.JSRefMove<MissedPushSubscriptionChangeEvent>());
                         break;
                     case "sync":
                         ServiceWorker_OnSync(e.JSRefMove<MissedSyncEvent>());
@@ -160,7 +160,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Occurs when a push subscription has been invalidated, or is about to be invalidated (e.g. when a push service sets an expiration time).
         /// </summary>
-        protected virtual void ServiceWorker_OnPushSubscriptionChange(PushSubscriptionChangeEvent e) { }
+        protected virtual Task ServiceWorker_OnPushSubscriptionChangeAsync(PushSubscriptionChangeEvent e) => Task.CompletedTask;
         /// <summary>
         /// Triggered when a call to SyncManager.register is made from a service worker client page. The attempt to sync is made either immediately if the network is available or as soon as the network becomes available.
         /// </summary>
@@ -212,6 +212,29 @@ namespace SpawnDev.BlazorJS.WebWorkers
             else
             {
                 e.WaitUntil(ServiceWorker_OnInstallAsync(e));
+            }
+        }
+        void ServiceWorker_OnPushSubscriptionChange(PushSubscriptionChangeEvent e)
+        {
+            if (e is IMissedExtendableEvent missedEvent)
+            {
+                Async.Run(async () =>
+                {
+                    try
+                    {
+                        await ServiceWorker_OnPushSubscriptionChangeAsync(e);
+                        missedEvent.WaitResolve();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex.ToString());
+                        missedEvent.WaitReject();
+                    }
+                });
+            }
+            else
+            {
+                e.WaitUntil(ServiceWorker_OnPushSubscriptionChangeAsync(e));
             }
         }
         void ServiceWorker_OnActivate(ExtendableEvent e)
