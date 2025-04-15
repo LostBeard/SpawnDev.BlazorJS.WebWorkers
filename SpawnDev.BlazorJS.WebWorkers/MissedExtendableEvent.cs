@@ -6,7 +6,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// <summary>
     /// An ExtendableEvent that was initially missed while Blazor was loading, but was held using waitUntil() so that Blazor can handle it.<br />
     /// </summary>
-    internal class MissedExtendableEvent : ExtendableEvent, IMissedExtendableEvent
+    internal class MissedExtendableEvent : ExtendableEvent, IMissedEvent
     {
         ///<inheritdoc/>
         public MissedExtendableEvent(IJSInProcessObjectReference _ref) : base(_ref) { }
@@ -14,6 +14,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public void WaitResolve() => JSRef!.CallVoid("waitResolve");
         ///<inheritdoc/>
         public void WaitReject() => JSRef!.CallVoid("waitReject");
+        ///<inheritdoc/>
+        public bool IsExtended => !JSRef!.IsUndefined("waitResolve");
     }
 }
 

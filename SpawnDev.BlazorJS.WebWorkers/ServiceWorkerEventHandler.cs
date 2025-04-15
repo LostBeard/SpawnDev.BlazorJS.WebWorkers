@@ -90,52 +90,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
             }
         }
-        void ServiceWorker_OnNotificationClose(NotificationEvent e)
-        {
-            if (e is MissedNotificationEvent missedEvent)
-            {
-                Async.Run(async () =>
-                {
-                    try
-                    {
-                        await ServiceWorker_OnNotificationCloseAsync(e);
-                        missedEvent.WaitResolve();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine(ex.ToString());
-                        missedEvent.WaitReject();
-                    }
-                });
-            }
-            else
-            {
-                e.WaitUntil(ServiceWorker_OnNotificationCloseAsync(e));
-            }
-        }
-        void ServiceWorker_OnNotificationClick(NotificationEvent e)
-        {
-            if (e is MissedNotificationEvent missedEvent)
-            {
-                Async.Run(async () =>
-                {
-                    try
-                    {
-                        await ServiceWorker_OnNotificationClickAsync(e);
-                        missedEvent.WaitResolve();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine(ex.ToString());
-                        missedEvent.WaitReject();
-                    }
-                });
-            }
-            else
-            {
-                e.WaitUntil(ServiceWorker_OnNotificationClickAsync(e));
-            }
-        }
+        #region Service Worker overridable events
         /// <summary>
         /// Occurs on app startup
         /// </summary>
@@ -173,6 +128,54 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Occurs when a user clicks on a displayed notification.
         /// </summary>
         protected virtual Task ServiceWorker_OnNotificationClickAsync(NotificationEvent e) => Task.CompletedTask;
+        #endregion
+        #region Missed event intermediate handlers
+        void ServiceWorker_OnNotificationClose(NotificationEvent e)
+        {
+            if (e is MissedNotificationEvent missedEvent && missedEvent.IsExtended)
+            {
+                Async.Run(async () =>
+                {
+                    try
+                    {
+                        await ServiceWorker_OnNotificationCloseAsync(e);
+                        missedEvent.WaitResolve();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex.ToString());
+                        missedEvent.WaitReject();
+                    }
+                });
+            }
+            else
+            {
+                e.WaitUntil(ServiceWorker_OnNotificationCloseAsync(e));
+            }
+        }
+        void ServiceWorker_OnNotificationClick(NotificationEvent e)
+        {
+            if (e is MissedNotificationEvent missedEvent && missedEvent.IsExtended)
+            {
+                Async.Run(async () =>
+                {
+                    try
+                    {
+                        await ServiceWorker_OnNotificationClickAsync(e);
+                        missedEvent.WaitResolve();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex.ToString());
+                        missedEvent.WaitReject();
+                    }
+                });
+            }
+            else
+            {
+                e.WaitUntil(ServiceWorker_OnNotificationClickAsync(e));
+            }
+        }
         /// <summary>
         /// Occurs when a fetch() is called.
         /// </summary>
@@ -193,7 +196,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         void ServiceWorker_OnInstall(ExtendableEvent e)
         {
-            if (e is MissedExtendableEvent missedEvent)
+            if (e is MissedExtendableEvent missedEvent && missedEvent.IsExtended)
             {
                 Async.Run(async () =>
                 {
@@ -216,7 +219,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         void ServiceWorker_OnPushSubscriptionChange(PushSubscriptionChangeEvent e)
         {
-            if (e is IMissedExtendableEvent missedEvent)
+            if (e is IMissedEvent missedEvent && missedEvent.IsExtended)
             {
                 Async.Run(async () =>
                 {
@@ -239,7 +242,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         void ServiceWorker_OnActivate(ExtendableEvent e)
         {
-            if (e is MissedExtendableEvent missedEvent)
+            if (e is MissedExtendableEvent missedEvent && missedEvent.IsExtended)
             {
                 Async.Run(async () =>
                 {
@@ -284,7 +287,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         void ServiceWorker_OnMessage(ExtendableMessageEvent e)
         {
-            if (e is MissedExtendableMessageEvent missedEvent)
+            if (e is MissedExtendableMessageEvent missedEvent && missedEvent.IsExtended)
             {
                 Async.Run(async () =>
                 {
@@ -307,7 +310,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         void ServiceWorker_OnPush(PushEvent e)
         {
-            if (e is MissedPushEvent missedEvent)
+            if (e is MissedPushEvent missedEvent && missedEvent.IsExtended)
             {
                 Async.Run(async () =>
                 {
@@ -330,7 +333,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         void ServiceWorker_OnSync(SyncEvent e)
         {
-            if (e is MissedSyncEvent missedEvent)
+            if (e is MissedSyncEvent missedEvent && missedEvent.IsExtended)
             {
                 Async.Run(async () =>
                 {
@@ -351,6 +354,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnSyncAsync(e));
             }
         }
+        #endregion
         /// <summary>
         /// Release resources
         /// </summary>
