@@ -78,29 +78,38 @@ if (globalThisTypeName == 'SharedWorkerGlobalScope') {
     function handleMissedEvent(e) {
         if (!holdEvents) return;
         consoleLog('ServiceWorker missed event:', e.type, e);
-        if (e.waitUntil && e.type != 'fetch') {
+        if (e.respondWith) {
+            // fetch and canmakepayment ExtendableEvents use respondWith
+            var responsePromise = new Promise(function (resolve, reject) {
+                e.responseResolve = resolve;
+                e.responseReject = reject;
+            });
+            e.respondWith(responsePromise);
+        } else if (e.waitUntil) {
+            // all other ExtendableEvents use waitUntil
             var waitUntilPromise = new Promise(function (resolve, reject) {
                 e.waitResolve = resolve;
                 e.waitReject = reject;
             });
             e.waitUntil(waitUntilPromise);
         }
-        if (e.respondWith && e.type == 'fetch') {
-            var responsePromise = new Promise(function (resolve, reject) {
-                e.responseResolve = resolve;
-                e.responseReject = reject;
-            });
-            e.respondWith(responsePromise);
-        }
         missedServiceWorkerEvents.push(e);
     }
     self.addEventListener('activate', handleMissedEvent);
+    self.addEventListener('backgroundfetchabort', handleMissedEvent);
+    self.addEventListener('backgroundfetchclick', handleMissedEvent);
+    self.addEventListener('backgroundfetchfail', handleMissedEvent);
+    self.addEventListener('backgroundfetchsuccess', handleMissedEvent);
+    self.addEventListener('canmakepayment', handleMissedEvent);
+    self.addEventListener('contentdelete', handleMissedEvent);
+    self.addEventListener('cookiechange', handleMissedEvent);
     self.addEventListener('fetch', handleMissedEvent);
     self.addEventListener('install', handleMissedEvent);
     self.addEventListener('message', handleMissedEvent);
     self.addEventListener('messageerror', handleMissedEvent);
     self.addEventListener('notificationclick', handleMissedEvent);
     self.addEventListener('notificationclose', handleMissedEvent);
+    self.addEventListener('paymentrequest', handleMissedEvent);
     self.addEventListener('periodicsync', handleMissedEvent);
     self.addEventListener('push', handleMissedEvent);
     self.addEventListener('pushsubscriptionchange', handleMissedEvent);
