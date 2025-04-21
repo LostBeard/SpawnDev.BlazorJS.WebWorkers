@@ -36,15 +36,17 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (ServiceWorkerThis != null)
             {
                 // the service is running a ServiceWorker
+                ServiceWorkerThis.OnActivate += ServiceWorker_OnActivate;
                 ServiceWorkerThis.OnFetch += ServiceWorker_OnFetch;
                 ServiceWorkerThis.OnInstall += ServiceWorker_OnInstall;
-                ServiceWorkerThis.OnActivate += ServiceWorker_OnActivate;
                 ServiceWorkerThis.OnMessage += ServiceWorker_OnMessage;
+                ServiceWorkerThis.OnMessageError += ServiceWorker_OnMessageError;
+                ServiceWorkerThis.OnNotificationClick += ServiceWorker_OnNotificationClick;
+                ServiceWorkerThis.OnNotificationClose += ServiceWorker_OnNotificationClose;
+                ServiceWorkerThis.OnPeriodicSync += ServiceWorker_OnPeriodicSync;
                 ServiceWorkerThis.OnPush += ServiceWorker_OnPush;
                 ServiceWorkerThis.OnPushSubscriptionChange += ServiceWorker_OnPushSubscriptionChange;
                 ServiceWorkerThis.OnSync += ServiceWorker_OnSync;
-                ServiceWorkerThis.OnNotificationClose += ServiceWorker_OnNotificationClose;
-                ServiceWorkerThis.OnNotificationClick += ServiceWorker_OnNotificationClick;
                 GetMissedServiceWorkerEvents();
             }
         }
@@ -72,11 +74,17 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     case "message":
                         ServiceWorker_OnMessage(e.JSRefMove<MissedExtendableMessageEvent>());
                         break;
+                    case "messageerror":
+                        ServiceWorker_OnMessageError(e.JSRefMove<MissedExtendableMessageEvent>());
+                        break;
                     case "notificationclick":
                         ServiceWorker_OnNotificationClose(e.JSRefMove<MissedNotificationEvent>());
                         break;
                     case "notificationclose":
                         ServiceWorker_OnNotificationClose(e.JSRefMove<MissedNotificationEvent>());
+                        break;
+                    case "periodicsync":
+                        ServiceWorker_OnPeriodicSync(e.JSRefMove<MissedPeriodicSyncEvent>());
                         break;
                     case "push":
                         ServiceWorker_OnPush(e.JSRefMove<MissedPushEvent>());
@@ -109,6 +117,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         protected virtual Task ServiceWorker_OnMessageAsync(ExtendableMessageEvent e) => Task.CompletedTask;
         /// <summary>
+        /// Occurs when incoming messages can't be deserialized.
+        /// </summary>
+        protected virtual Task ServiceWorker_OnMessageErrorAsync(ExtendableMessageEvent e) => Task.CompletedTask;
+        /// <summary>
         /// Occurs when a server push notification is received.
         /// </summary>
         protected virtual Task ServiceWorker_OnPushAsync(PushEvent e) => Task.CompletedTask;
@@ -120,6 +132,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Triggered when a call to SyncManager.register is made from a service worker client page. The attempt to sync is made either immediately if the network is available or as soon as the network becomes available.
         /// </summary>
         protected virtual Task ServiceWorker_OnSyncAsync(SyncEvent e) => Task.CompletedTask;
+        /// <summary>
+        /// The periodicsync event of the ServiceWorkerGlobalScope interface is fired at timed intervals, specified when registering a PeriodicSyncManager.
+        /// </summary>
+        protected virtual Task ServiceWorker_OnPeriodicSyncAsync(PeriodicSyncEvent e) => Task.CompletedTask;
         /// <summary>
         /// Occurs when a user closes a displayed notification.
         /// </summary>
@@ -308,6 +324,29 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 e.WaitUntil(ServiceWorker_OnMessageAsync(e));
             }
         }
+        void ServiceWorker_OnMessageError(ExtendableMessageEvent e)
+        {
+            if (e is MissedExtendableMessageEvent missedEvent && missedEvent.IsExtended)
+            {
+                Async.Run(async () =>
+                {
+                    try
+                    {
+                        await ServiceWorker_OnMessageErrorAsync(e);
+                        missedEvent.WaitResolve();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex.ToString());
+                        missedEvent.WaitReject();
+                    }
+                });
+            }
+            else
+            {
+                e.WaitUntil(ServiceWorker_OnMessageErrorAsync(e));
+            }
+        }
         void ServiceWorker_OnPush(PushEvent e)
         {
             if (e is MissedPushEvent missedEvent && missedEvent.IsExtended)
@@ -329,6 +368,29 @@ namespace SpawnDev.BlazorJS.WebWorkers
             else
             {
                 e.WaitUntil(ServiceWorker_OnPushAsync(e));
+            }
+        }
+        void ServiceWorker_OnPeriodicSync(PeriodicSyncEvent e)
+        {
+            if (e is MissedPeriodicSyncEvent missedEvent && missedEvent.IsExtended)
+            {
+                Async.Run(async () =>
+                {
+                    try
+                    {
+                        await ServiceWorker_OnPeriodicSyncAsync(e);
+                        missedEvent.WaitResolve();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex.ToString());
+                        missedEvent.WaitReject();
+                    }
+                });
+            }
+            else
+            {
+                e.WaitUntil(ServiceWorker_OnPeriodicSyncAsync(e));
             }
         }
         void ServiceWorker_OnSync(SyncEvent e)

@@ -94,12 +94,14 @@ if (globalThisTypeName == 'SharedWorkerGlobalScope') {
         }
         missedServiceWorkerEvents.push(e);
     }
-    self.addEventListener('install', handleMissedEvent);
     self.addEventListener('activate', handleMissedEvent);
     self.addEventListener('fetch', handleMissedEvent);
+    self.addEventListener('install', handleMissedEvent);
     self.addEventListener('message', handleMissedEvent);
+    self.addEventListener('messageerror', handleMissedEvent);
     self.addEventListener('notificationclick', handleMissedEvent);
     self.addEventListener('notificationclose', handleMissedEvent);
+    self.addEventListener('periodicsync', handleMissedEvent);
     self.addEventListener('push', handleMissedEvent);
     self.addEventListener('pushsubscriptionchange', handleMissedEvent);
     self.addEventListener('sync', handleMissedEvent);
