@@ -347,7 +347,7 @@ From MDN [LockManager.request()](https://developer.mozilla.org/en-US/docs/Web/AP
 >
 > The mode property of the options parameter may be either "exclusive" or "shared".
 >
-> Request an "exclusive" lock when it should only be held by one code instance at a time. This applies to code in both tabs and workers. Use this to represent mutually exclusive access to a resource. When an "exclusive" lock for a given name is held, no other lock with the same name can be held.
+> ***Request an "exclusive" lock when it should only be held by one code instance at a time. This applies to code in both tabs and workers.*** Use this to represent mutually exclusive access to a resource. When an "exclusive" lock for a given name is held, no other lock with the same name can be held.
 >
 > Request a "shared" lock when multiple instances of the code can share access to a resource. When a "shared" lock for a given name is held, other "shared" locks for the same name can be granted, but no "exclusive" locks with that name can be held or granted.
 >
