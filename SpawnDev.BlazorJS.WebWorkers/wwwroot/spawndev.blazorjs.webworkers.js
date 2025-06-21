@@ -49,7 +49,7 @@ consoleLog('location.href', location.href);
 // at this time, I ma not sure about fetch on service worker contexts. some debug code is being left until known.
 if (globalThisTypeName == 'SharedWorkerGlobalScope') {
     // important for SharedWorker
-    // catch any incoming connetions that happen while .Net is loading
+    // catch any incoming connections that happen while .Net is loading
     let _missedConnections = [];
     self.takeOverOnConnectEvent = function (newConnectFunction) {
         var tmp = _missedConnections;
