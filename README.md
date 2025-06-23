@@ -72,6 +72,10 @@ The WebWorkerService singleton contains many methods for working with multiple i
 #### Missing Javascript dependencies in WebWorkers
 - See [Javascript dependencies in WebWorkers](#javascript-dependencies-in-webworkers)
 
+#### Startup errors in WebWorkers
+- A lot of Blazor Razor Class Libraries use [JavaScript initializers](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/startup?view=aspnetcore-9.0#javascript-initializers) that load during the Blazor app's startup. The problem is, that Javascript expects to be running in a [Window](https://developer.mozilla.org/en-US/docs/Web/API/Window) context. This can cause startup errors when your app starts in a web worker or service worker.
+- See [Disabling RCL JavaScript initializers in WebWorkers](#disabling-rcl-javascript-initializers-in-webworkers) for a workaround.
+
 ### Example WebWorkerService setup and usage. 
 
 Program.cs  
@@ -545,6 +549,44 @@ index.html (partial view)
     </script>
     <script>
         console.log('This script will only run in a window scope');
+    </script>
+```
+
+## Disabling RCL JavaScript initializers in WebWorkers
+Some Razor Class Libraries (RCL) use [JavaScript initializers](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/startup?view=aspnetcore-9.0#javascript-initializers) that load during the Blazor app's startup. The problem is, that Javascript expects to be running in a [Window](https://developer.mozilla.org/en-US/docs/Web/API/Window) context. This can cause startup errors when your app starts in a web worker or service worker.
+An example of this is Fluent UI, which uses a JavaScript initializer to load the Fluent UI JavaScript library (see [issue #12](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/issues/12).) 
+Javascript initializers can be disabled by modifying the `blazor.boot.json` config contents during Blazor startup. See below example.  
+
+In your `index.html`, add a custom Blazor startup that removes unwanted JavaScript initializers from the `blazor.boot.json` config file. This example removes the Fluent UI JavaScript initializer, but you can modify it to remove any other RCL JavaScript initializers as needed.
+```html
+    <!-- Set Blazor autostart to false so we can modify the startup -->
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script webworker-enabled>
+        // below removes Fluent-UI Javascript from initialization when not running in a Window global scope
+        Blazor.start({
+            loadBootResource: function (type, name, defaultUri, integrity) {
+                if (type == 'dotnetjs') {
+                    return null;
+                } else {
+                    return (async function () {
+                        var ret = await fetch(defaultUri, {
+                            cache: 'no-cache',
+                            integrity: integrity,
+                        });
+                        if (name == 'blazor.boot.json' && ret.ok && globalThis.constructor.name !== 'Window') {
+                            var json = await ret.json();
+                            // remove the 2 references to Fluent-UI scripts (or any other RCL scripts)
+                            delete json.resources.libraryInitializers['_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js'];
+                            delete json.resources.modulesAfterConfigLoaded['../_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js'];
+                            // return a new response with the modified blazor.boot.json
+                            const body = JSON.stringify(json);
+                            ret = new Response(body, ret);
+                        }
+                        return ret;
+                    })();
+                }
+            }
+        });
     </script>
 ```
 
