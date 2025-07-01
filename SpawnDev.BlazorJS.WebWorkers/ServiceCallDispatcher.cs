@@ -15,6 +15,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// </summary>
     public class ServiceCallDispatcher : AsyncCallDispatcher, IDisposable
     {
+        /// <summary>
+        /// Gets or sets a value indicating whether the full exception string, including inner exceptions,  should be
+        /// included in error messages. This became the default in version 2.14.0, but can be set to false to revert to the previous behavior of only including the top-level exception message.
+        /// </summary>
+        public static bool FullExceptionString { get; set; } = true;
         class CallSideParameter
         {
             public string Name { get; }
@@ -318,7 +323,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             catch (Exception ex)
             {
                 // the call failed
-                err = ex.ToString();
+                err = FullExceptionString ? ex.ToString() : ex.Message;
 #if DEBUG && false
                 JS.Log($"Execution of remote call failed: {ex.Message}");
                 JS.Log($"Stack: {ex.StackTrace ?? ""}");
