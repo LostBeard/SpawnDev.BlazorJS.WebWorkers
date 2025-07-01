@@ -318,7 +318,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             catch (Exception ex)
             {
                 // the call failed
-                err = ex.Message;
+                err = ex.ToString();
 #if DEBUG && false
                 JS.Log($"Execution of remote call failed: {ex.Message}");
                 JS.Log($"Stack: {ex.StackTrace ?? ""}");
