@@ -323,7 +323,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             catch (Exception ex)
             {
                 // the call failed
-                err = FullExceptionString ? ex.ToString() : ex.Message;
+                err = FullExceptionString ? ExceptionSerializer.Serialize(ex) : ex.Message;
 #if DEBUG && false
                 JS.Log($"Execution of remote call failed: {ex.Message}");
                 JS.Log($"Stack: {ex.StackTrace ?? ""}");
@@ -468,7 +468,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 foreach (var keyToRemove in keysToRemove) _actionHandles.Remove(keyToRemove);
                 // get result or exception
                 string? err = returnArray.GetItem<string?>(0);
-                if (!string.IsNullOrEmpty(err)) throw new Exception(err);
+                if (!string.IsNullOrEmpty(err))
+                {
+                    var exception = ExceptionSerializer.Deserialize(err)!;
+                    throw exception;
+                }
                 var finalReturnType = methodInfo.GetFinalReturnType();
                 if (finalReturnType.IsVoid())
                 {
@@ -530,7 +534,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 foreach (var key in keysToRemove) _actionHandles.Remove(key);
                 // get result or exception
                 string? err = returnArray.GetItem<string?>(0);
-                if (!string.IsNullOrEmpty(err)) throw new Exception(err);
+                if (!string.IsNullOrEmpty(err))
+                {
+                    var exception = ExceptionSerializer.Deserialize(err)!;
+                    throw exception;
+                }
                 var finalReturnType = methodBase is MethodInfo methodInfo ? methodInfo.GetFinalReturnType() : typeof(void);
                 if (finalReturnType.IsVoid())
                 {
