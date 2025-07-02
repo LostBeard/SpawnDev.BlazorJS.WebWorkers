@@ -18,7 +18,11 @@
         public static string? Serialize(Exception? exception)
         {
             if (exception == null) return null;
-            return $"{exception.GetType().FullName}: {exception.ToString()}";
+            // most of the time, Exceptions prefix the Exception type's FullName to the ToString() return value but it is not required
+            // if it is not already there, add it
+            var exceptionString = exception.ToString();
+            var typeNamePart = $"{exception.GetType().FullName}: ";
+            return exceptionString.StartsWith(typeNamePart) ? exceptionString : $"{typeNamePart}{exceptionString}";
         }
         /// <summary>
         /// Deserializes an exception from a serialized string.
