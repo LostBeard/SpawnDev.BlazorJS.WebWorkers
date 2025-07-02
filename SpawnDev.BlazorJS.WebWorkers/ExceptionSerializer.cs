@@ -6,10 +6,9 @@
     public static class ExceptionSerializer
     {
         /// <summary>
-        /// Contains types of exceptions that cannot be created via Activator.CreateInstance.<br/>
-        /// Helps to speed up deserialization by avoiding repeated attempts to create these types.
+        /// Exception type cache
         /// </summary>
-        static List<string> UncreatableExceptionTypes = new List<string>();
+        static Dictionary<string, Type?> ExceptionTypes = new Dictionary<string, Type?>();
         /// <summary>
         /// Serializes an exception to a string.
         /// </summary>
@@ -36,23 +35,22 @@
             if (parts.Length < 2) return null;
             var typeName = parts[0];
             var message = parts[1];
-            if (UncreatableExceptionTypes.Contains(typeName))
+            if (!ExceptionTypes.TryGetValue(typeName, out var exTypeCached))
             {
-                return new Exception(serializedException);
+                exTypeCached = Type.GetType(typeName);
+                ExceptionTypes[typeName] = exTypeCached;
             }
-            var exType = Type.GetType(typeName);
-            if (exType == null)
+            if (exTypeCached == null)
             {
-                UncreatableExceptionTypes.Add(typeName);
                 return new Exception(serializedException);
             }
             try
             {
-                return (Exception)Activator.CreateInstance(exType, message)!;
+                return (Exception)Activator.CreateInstance(exTypeCached, message)!;
             }
             catch
             {
-                UncreatableExceptionTypes.Add(typeName);
+                ExceptionTypes[typeName] = null;
                 return new Exception(serializedException);
             }
         }
