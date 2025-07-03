@@ -245,11 +245,11 @@ var initWebWorkerBlazor = async function () {
         for (var scriptNode of scriptNodes) {
             let src = scriptNode.attributes.src;
             if (!src) continue;
-            if (src.includes('_framework/blazor.web.js')) {
+            if (src.includes('_framework/blazor.web.')) {
                 if (overrideUnitedRuntime) {
                     // blazor united comes with the wasm runtime also
                     // if overrideUnitedRuntime == true, we will use the wasm runtime instead of the united runtime
-                    src = src.replace('_framework/blazor.web.js', '_framework/blazor.webassembly.js');
+                    src = src.replace('_framework/blazor.web.', '_framework/blazor.webassembly.');
                     scriptNode.attributes.src = src;
                 } else {
                     // modify the united runtime as needed for compatibility with WebWorkers
@@ -284,12 +284,12 @@ var initWebWorkerBlazor = async function () {
                         };
                     } else {
                         console.warn(`Failed to find Blazor United runtime 'placeHolderPatt' in '${src}' for on the fly patching. Will try Blazor WASM runtime '_framework/blazor.webassembly.js' as fallback.`);
-                        src = src.replace('_framework/blazor.web.js', '_framework/blazor.webassembly.js');
+                        src = src.replace('_framework/blazor.web.', '_framework/blazor.webassembly.');
                         scriptNode.attributes.src = src;
                     }
                 }
             }
-            if (src.includes('_framework/blazor.webassembly.js')) {
+            if (src.includes('_framework/blazor.webassembly.')) {
                 // modify the wasm runtime as needed for compatibility with WebWorkers
                 if (typeof scriptNode.attributes[WebWorkerEnabledAttributeName] === 'undefined') {
                     scriptNode.attributes[WebWorkerEnabledAttributeName] = '';
