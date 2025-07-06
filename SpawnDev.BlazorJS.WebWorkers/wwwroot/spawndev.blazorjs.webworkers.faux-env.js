@@ -1,5 +1,3 @@
-'use strict';
-
 // Todd Tanner
 // 2022 - 2023
 // built as part of SpawnDev.BlazorJS.WebWorkers
