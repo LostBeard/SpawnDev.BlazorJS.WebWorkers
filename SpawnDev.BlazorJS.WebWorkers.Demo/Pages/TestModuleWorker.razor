@@ -1,0 +1,49 @@
+﻿@page "/TestModuleWorker"
+@using SpawnDev.BlazorJS.JSObjects
+@implements IDisposable
+
+<PageTitle>Module Worker Test</PageTitle>
+
+<h1>Module Worker Test</h1>
+<p>
+    This component tests starting a web worker in module mode.<br />
+    Some Javascript libraries require module mode, but service workers must be either 'classic' mode and use importScripts or 'module' mode and use static imports.<br />
+    Window, SharedWebWorker, and DedicatedWebWorker can use dynamic imports but that is not supported in a ServiceWorker.<br />
+    SpawnDev.BlazorJS.WebWorkers needs to support starting in a ServiceWorker that is running in 'module' mode to enable support for ESM Javascript modules.<br />
+    Running in a Worker that is started in module mode is very similar to running in a ServiceWorker that is started in module mode, but is easier to test.
+</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Run</button>
+
+@code {
+    [Inject]
+    WebWorkerService WebWorkerService { get; set; } = default!;
+
+    public void Dispose()
+    {
+
+    }
+    private async Task IncrementCount()
+    {
+        var worker = await WebWorkerService.GetWebWorker(new WebWorkerOptions
+        {
+            // ScriptUrl = new Uri(new Uri(WebWorkerService.AppBaseUri), "app.worker.module.js").ToString(),
+            // QueryParams = new Dictionary<string, string>
+            // {
+            //     { "autoStart", "0" },
+            //     { "verbose", "1" },
+            // },
+            WorkerOptions = new WorkerOptions
+            {
+                Type = "module"
+            }
+        });
+        var ret = await worker!.Run(() => TestMethod(null!));
+        Console.WriteLine($"Worker returned: {ret}");
+    }
+    static int TestMethod([FromServices] BlazorJSRuntime JS)
+    {
+        JS.Log($"TestMethod: {JS.GlobalScope}");
+        return 42;
+    }
+}

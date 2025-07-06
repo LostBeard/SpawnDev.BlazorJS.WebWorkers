@@ -1,17 +1,35 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using SpawnDev.BlazorJS;
+using SpawnDev.BlazorJS.JSObjects;
 using SpawnDev.BlazorJS.WebWorkers;
 using SpawnDev.BlazorJS.WebWorkers.Demo;
+using SpawnDev.BlazorJS.WebWorkers.Demo.Services;
+
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
-builder.RootComponents.Add<App>("#app");
-builder.RootComponents.Add<HeadOutlet>("head::after");
-
 builder.Services.AddBlazorJSRuntime(out var JS);
+Console.WriteLine($">>> BlazorJS Running: {JS.GlobalScope.ToString()}");
+
 builder.Services.AddWebWorkerService();
 
+builder.Services.RegisterServiceWorker<AppServiceWorker>(new ServiceWorkerConfig
+{
+    ScriptURL = "./app.service-worker.module.js",
+    Options = new ServiceWorkerRegistrationOptions
+    {
+        Scope = "./",
+        Type = "module",
+    },
+});
+
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+if (JS.IsWindow)
+{
+    builder.RootComponents.Add<App>("#app");
+    builder.RootComponents.Add<HeadOutlet>("head::after");
+}
 
 var host = await builder.Build().StartBackgroundServices();
 

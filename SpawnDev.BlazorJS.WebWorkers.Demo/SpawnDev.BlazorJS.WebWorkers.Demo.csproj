@@ -13,11 +13,13 @@
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
-		<ProjectReference Include="..\SpawnDev.BlazorJS.WebWorkers\SpawnDev.BlazorJS.WebWorkers.csproj" />
+		<!-- <ProjectReference Include="..\SpawnDev.BlazorJS.WebWorkers\SpawnDev.BlazorJS.WebWorkers.csproj" /> -->
+
+		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="2.16.1-preview.28" />
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="2.9.0" />
+		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="2.16.1-preview.14" />
 	</ItemGroup>
 
 	<!-- SpawnDev.BlazorJS.WebWorkers config -->
@@ -31,6 +33,6 @@
 		- true  - patch during build
 		! NOTE - The asset manifest file (service-worker-assets.js) will be updated during publish build if using the ServiceWorkerAssetsManifest flag and WebWorkerPatchFramework == true
 		-->
-		<WebWorkerPatchFramework>false</WebWorkerPatchFramework>
+		<WebWorkerPatchFramework>true</WebWorkerPatchFramework>
 	</PropertyGroup>
 </Project>
