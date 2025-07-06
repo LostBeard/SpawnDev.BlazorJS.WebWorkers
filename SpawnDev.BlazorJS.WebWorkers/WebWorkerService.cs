@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using SpawnDev.BlazorJS.JSObjects;
 using SpawnDev.BlazorJS.Toolbox;
@@ -60,6 +59,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         public bool InterConnectEnabled { get; set; } = true;
         /// <summary>
+        /// If true, the faux window environment created to allow Blazor to load is cleaned up after the Blazor app has loaded.<br />
+        /// The default is true for compatibility with other libraries.
+        /// </summary>
+        public bool RestoreEnvironment { get; set; } = true;
+        /// <summary>
         /// A ServiceCallDispatcher that executes on this instance
         /// </summary>
         public ServiceCallDispatcher Local { get; }
@@ -95,6 +99,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// The script location used for new worker instances
         /// </summary>
         public string WebWorkerJSScript { get; } = "spawndev.blazorjs.webworkers.js";
+        /// <summary>
+        /// The script location used for new module worker instances
+        /// </summary>
+        public string WebWorkerModuleJSScript { get; } = "spawndev.blazorjs.webworkers.module.js";
         /// <summary>
         /// The script used for instance interconnect shared worker instance (if used)
         /// </summary>
@@ -171,11 +179,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 WebWorkerSupported = !JS.IsUndefined("Worker");
                 SharedWebWorkerSupported = !JS.IsUndefined("SharedWorker");
                 ServiceWorkerSupported = !JS.IsUndefined("ServiceWorkerRegistration");
-                AppBaseUri = JS.Get<string>("document.baseURI");
+                AppBaseUri = JS.Get<string?>("document?.baseURI") ?? JS.Get<string>("documentBaseURI");
                 var locationHref = JS.Get<string>("location.href");
                 var locationUri = new Uri(locationHref);
                 var workerScriptUri = new Uri(new Uri(AppBaseUri), WebWorkerJSScript);
                 WebWorkerJSScript = workerScriptUri.ToString();
+                WebWorkerModuleJSScript = new Uri(new Uri(AppBaseUri), WebWorkerModuleJSScript).ToString();
                 Locks = JS.Get<LockManager>("navigator.locks");
                 LockManagerSupported = Locks != null;
                 var queryParams = HttpUtility.ParseQueryString(locationUri.Query);
@@ -191,6 +200,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     var newPath = NavigationManager.ToBaseRelativePath(locationHref);
                     // remove the instanceOwnerIdKey attribute from the url
                     NavigationManager.NavigateTo(newPath, false, true);
+                }
+                if (RestoreEnvironment && !JS.IsWindow)
+                {
+                    JS.Delete("window");
+                    JS.Delete("document");
                 }
                 Info = new AppInstanceInfo
                 {
@@ -672,9 +686,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (JS.WindowThis != null)
             {
+                var workerMode = ServiceWorkerConfig.Options?.Type;
                 if (string.IsNullOrEmpty(ServiceWorkerConfig.ScriptURL))
                 {
-                    ServiceWorkerConfig.ScriptURL = WebWorkerJSScript;
+                    ServiceWorkerConfig.ScriptURL = workerMode == "module" ? WebWorkerModuleJSScript : WebWorkerJSScript;
                 }
                 var kvps = new Dictionary<string, string>();
                 if (ServiceWorkerConfig.ImportServiceWorkerAssets)
@@ -792,6 +807,68 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var webWorker = new WebWorker(worker, WebAssemblyServices);
             return webWorker;
         }
+
+        public async Task<WebWorker?> GetWebWorker(WebWorkerOptions webWorkerOptions)
+        {
+            var webWorker = GetWebWorkerSync(webWorkerOptions);
+            if (webWorker == null) return null; 
+            await webWorker.WhenReady;
+            return webWorker;
+        }
+
+        public WebWorker? GetWebWorkerSync(WebWorkerOptions webWorkerOptions)
+        {
+            if (!WebWorkerSupported) return null;
+            webWorkerOptions ??= new WebWorkerOptions();
+            webWorkerOptions.WorkerOptions ??= new WorkerOptions();
+            webWorkerOptions.QueryParams ??= new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(WorkerIndexHtml))
+            {
+                webWorkerOptions.QueryParams["indexHtml"] = WorkerIndexHtml;
+            }
+            if (string.IsNullOrEmpty(webWorkerOptions.ScriptUrl))
+            {
+                webWorkerOptions.ScriptUrl = webWorkerOptions.WorkerOptions.Type == "module" ? WebWorkerModuleJSScript : WebWorkerJSScript;
+            }
+            if (webWorkerOptions.QueryParams.Count > 0)
+            {
+                webWorkerOptions.ScriptUrl += "?" + string.Join('&', webWorkerOptions.QueryParams.Select(o => $"{o.Key}={o.Value}"));
+            }
+            var worker = new Worker(webWorkerOptions.ScriptUrl, webWorkerOptions.WorkerOptions);
+            var webWorker = new WebWorker(worker, WebAssemblyServices);
+            return webWorker;
+        }
+        public async Task<SharedWebWorker?> GetSharedWebWorker(SharedWebWorkerOptions webWorkerOptions)
+        {
+            var webWorker = GetSharedWebWorkerSync(webWorkerOptions);
+            if (webWorker == null) return null;
+            await webWorker.WhenReady;
+            return webWorker;
+        }
+        public SharedWebWorker? GetSharedWebWorkerSync(SharedWebWorkerOptions webWorkerOptions)
+        {
+            if (!WebWorkerSupported) return null;
+            webWorkerOptions ??= new SharedWebWorkerOptions();
+            webWorkerOptions.WorkerOptions ??= new SharedWorkerOptions();
+            webWorkerOptions.QueryParams ??= new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(WorkerIndexHtml))
+            {
+                webWorkerOptions.QueryParams["indexHtml"] = WorkerIndexHtml;
+            }
+            if (string.IsNullOrEmpty(webWorkerOptions.ScriptUrl))
+            {
+                webWorkerOptions.ScriptUrl = webWorkerOptions.WorkerOptions.Type == "module" ? WebWorkerModuleJSScript : WebWorkerJSScript;
+            }
+            if (webWorkerOptions.QueryParams.Count > 0)
+            {
+                webWorkerOptions.ScriptUrl += "?" + string.Join('&', webWorkerOptions.QueryParams.Select(o => $"{o.Key}={o.Value}"));
+            }
+            webWorkerOptions.WorkerOptions.Name ??= "";
+            var worker = new SharedWorker(webWorkerOptions.ScriptUrl, webWorkerOptions.WorkerOptions);
+            var webWorker = new SharedWebWorker(webWorkerOptions.WorkerOptions.Name, worker, WebAssemblyServices);
+            return webWorker;
+        }
+
         /// <summary>
         /// Returns a new SharedWebWorker instance. If a SharedWorker already existed by this name SharedWebWorker will be connected to that instance.
         /// </summary>

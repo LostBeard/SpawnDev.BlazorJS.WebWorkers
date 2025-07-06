@@ -7,6 +7,8 @@
 // Update 2024-07-15: this script will now be copied to the app wwwroot path instead of the rcl _content path (wwwroot/_content/SpawnDev.BlazorJS.WebWorkers/spawndev.blazorjs.webworkers.js)
 // this script loads a fake window and document environment
 // to enable loading the Blazor WASM app in a DedicatedWorkerGlobalScope, SharedWorkerGlobalScope or ServiceWorkerGlobalScope
+// This script is loaded when using 'classic' mode DedicatedWorker, SharedWorker, or ServiceWorker.
+// When using 'module' mode, the spawndev.blazorjs.webworkers.module.js script is loaded instead.
 
 var globalThisTypeName = self.constructor.name;
 var disableHotReload = true;
@@ -43,6 +45,16 @@ var consoleLog = function () {
 consoleLog('spawndev.blazorjs.webworkers: started');
 consoleLog('location.href', location.href);
 
+if (importServiceWorkerAssets) {
+    if (importServiceWorkerAssets.indexOf('.js') !== -1) {
+        consoleLog('importing asset manifest', importServiceWorkerAssets);
+        importScripts(importServiceWorkerAssets);
+    } else {
+        consoleLog('importing asset manifest', 'service-worker-assets.js');
+        importScripts('service-worker-assets.js');
+    }
+}
+
 // in some contexts, event handlers need to be added immediately and cannot wait for Blazor WASM's async startup
 // for example:
 // in a shared worker, the onconnect event handler needs to be set immediately to catch all invocations of the event
@@ -61,16 +73,8 @@ if (globalThisTypeName == 'SharedWorkerGlobalScope') {
         _missedConnections.push(e.ports[0]);
     };
 } else if (globalThisTypeName == 'ServiceWorkerGlobalScope') {
-    if (importServiceWorkerAssets) {
-        if (importServiceWorkerAssets.indexOf('.js') !== -1) {
-            consoleLog('importing asset manifest', importServiceWorkerAssets);
-            importScripts(importServiceWorkerAssets);
-        } else {
-            consoleLog('importing asset manifest', 'service-worker-assets.js');
-            importScripts('service-worker-assets.js');
-        }
-    }
-    // Starting Blazor requries using importScripts inside async functions
+
+    // Starting Blazor requires using importScripts inside async functions
     // e.waitUntil is used during the install event to allow importScripts inside async functions
     // it is resolved after loading is complete
     let holdEvents = true;
@@ -149,7 +153,24 @@ function getBWWURL(relativePath) {
 }
 consoleLog('spawndev.blazorjs.webworkers: loading fake window environment');
 // faux DOM and document environment
-//importScripts('spawndev.blazorjs.webworkers.faux-env.js');
+
+// importScripts available test
+function hasImportScripts() {
+    try {
+        importScripts(getBWWURL('spawndev.blazorjs.webworkers.empty.js?importScripts'));
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+var importScriptsSupported = hasImportScripts();
+if (!importScriptsSupported) {
+    consoleLog("importScripts is not supported. May be running in module mode.");
+} else {
+    consoleLog('importScripts is supported.');
+}
+
+importScripts(getBWWURL('spawndev.blazorjs.webworkers.event-holder.js'));
 importScripts(getBWWURL('spawndev.blazorjs.webworkers.faux-env.js'));
 // faux dom and window environment has been created (currently empty)
 // set document.baseURI to the apps basePath (which is relative to this scripts path)
@@ -166,7 +187,7 @@ async function hasDynamicImport() {
         return false;
     }
     try {
-        await import(getBWWURL('spawndev.blazorjs.webworkers.empty.js'));
+        await import(getBWWURL('spawndev.blazorjs.webworkers.empty.js?import'));
         return true;
     } catch (e) {
         return false;
@@ -200,9 +221,9 @@ var initWebWorkerBlazor = async function () {
     // detect if we need to use a patched framework
     var dynamicImportSupported = await hasDynamicImport();
     if (!dynamicImportSupported) {
-        consoleLog("import is not supported. The framework scripts will be fetched, patched, and then loaded. A CSP script-src rule blocking 'unsafe-eval' may prevent this");
+        consoleLog("dynamic import is not supported. The framework scripts will be fetched, patched, and then loaded. A CSP script-src rule blocking 'unsafe-eval' may prevent this");
     } else {
-        consoleLog('import is supported. The framework will be loaded as-is.');
+        consoleLog('dynamic import is supported. The framework will be loaded as-is.');
     }
     // Get index.html and parse it for scripts
     function getScriptNodes(indexHtmlSrc) {
