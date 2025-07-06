@@ -14,6 +14,7 @@
 </p>
 
 <button class="btn btn-primary" @onclick="IncrementCount">Run</button>
+<button class="btn btn-primary" @onclick="IncrementCount2">Run</button>
 
 @code {
     [Inject]
@@ -22,6 +23,24 @@
     public void Dispose()
     {
 
+    }
+    private async Task IncrementCount2()
+    {
+        var worker = await WebWorkerService.GetWebWorker(new WebWorkerOptions
+        {
+            // ScriptUrl = new Uri(new Uri(WebWorkerService.AppBaseUri), "app.worker.module.js").ToString(),
+            // QueryParams = new Dictionary<string, string>
+            // {
+            //     { "autoStart", "0" },
+            //     { "verbose", "1" },
+            // },
+            WorkerOptions = new WorkerOptions
+            {
+                //Type = "module"
+            }
+        });
+        var ret = await worker!.Run(() => TestMethod(null!));
+        Console.WriteLine($"Worker returned: {ret}");
     }
     private async Task IncrementCount()
     {
