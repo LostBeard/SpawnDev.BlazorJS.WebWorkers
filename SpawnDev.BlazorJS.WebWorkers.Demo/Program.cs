@@ -15,11 +15,9 @@ builder.Services.AddWebWorkerService();
 
 builder.Services.RegisterServiceWorker<AppServiceWorker>(new ServiceWorkerConfig
 {
-    ScriptURL = "./app.service-worker.module.js",
     Options = new ServiceWorkerRegistrationOptions
     {
-        Scope = "./",
-        Type = "module",
+        //Type = "module",
     },
 });
 
@@ -33,6 +31,20 @@ if (JS.IsWindow)
 
 var host = await builder.Build().StartBackgroundServices();
 
+
+JS.Set("_test", async (bool useModule) => {
+    var webWorkerService = host.Services.GetRequiredService<WebWorkerService>();
+    if (useModule)
+    {
+        var worker = await webWorkerService.GetWebWorker(new WebWorkerOptions { WorkerOptions = new WorkerOptions { Type = "module" } });
+        await worker!.Run(() => Console.WriteLine("module worker"));
+    }
+    else
+    {
+        var worker = await webWorkerService.GetWebWorker();
+        await worker!.Run(() => Console.WriteLine("classic worker"));
+    }
+});
 
 //var arg = new SharedCancellationTokenSource();
 //var token = arg.Token;

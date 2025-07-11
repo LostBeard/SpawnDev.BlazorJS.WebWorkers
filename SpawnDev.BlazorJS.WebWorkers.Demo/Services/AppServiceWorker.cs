@@ -23,7 +23,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
 
         protected override async Task ServiceWorker_OnInstallAsync(ExtendableEvent e)
         {
-            Log($"ServiceWorker_OnInstallAsync");
+            Log($"ServiceWorker_OnInstallAsync", JS.GlobalThisTypeName);
             _ = ServiceWorkerThis!.SkipWaiting();   // returned task can be ignored
         }
 
