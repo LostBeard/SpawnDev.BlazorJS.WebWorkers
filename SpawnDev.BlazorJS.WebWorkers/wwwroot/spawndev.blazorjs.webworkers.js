@@ -55,78 +55,6 @@ if (importServiceWorkerAssets) {
     }
 }
 
-// in some contexts, event handlers need to be added immediately and cannot wait for Blazor WASM's async startup
-// for example:
-// in a shared worker, the onconnect event handler needs to be set immediately to catch all invocations of the event
-// at this time, I ma not sure about fetch on service worker contexts. some debug code is being left until known.
-if (globalThisTypeName == 'SharedWorkerGlobalScope') {
-    // important for SharedWorker
-    // catch any incoming connections that happen while .Net is loading
-    let _missedConnections = [];
-    self.takeOverOnConnectEvent = function (newConnectFunction) {
-        var tmp = _missedConnections;
-        _missedConnections = [];
-        self.onconnect = newConnectFunction;
-        return tmp;
-    }
-    self.onconnect = function (e) {
-        _missedConnections.push(e.ports[0]);
-    };
-} else if (globalThisTypeName == 'ServiceWorkerGlobalScope') {
-
-    // Starting Blazor requires using importScripts inside async functions
-    // e.waitUntil is used during the install event to allow importScripts inside async functions
-    // it is resolved after loading is complete
-    let holdEvents = true;
-    let missedServiceWorkerEvents = [];
-    function handleMissedEvent(e) {
-        if (!holdEvents) return;
-        consoleLog('ServiceWorker missed event:', e.type, e);
-        if (e.respondWith) {
-            // fetch and canmakepayment ExtendableEvents use respondWith
-            var responsePromise = new Promise(function (resolve, reject) {
-                e.responseResolve = resolve;
-                e.responseReject = reject;
-            });
-            e.respondWith(responsePromise);
-        } else if (e.waitUntil) {
-            // all other ExtendableEvents use waitUntil
-            var waitUntilPromise = new Promise(function (resolve, reject) {
-                e.waitResolve = resolve;
-                e.waitReject = reject;
-            });
-            e.waitUntil(waitUntilPromise);
-        }
-        missedServiceWorkerEvents.push(e);
-    }
-    self.addEventListener('activate', handleMissedEvent);
-    self.addEventListener('backgroundfetchabort', handleMissedEvent);
-    self.addEventListener('backgroundfetchclick', handleMissedEvent);
-    self.addEventListener('backgroundfetchfail', handleMissedEvent);
-    self.addEventListener('backgroundfetchsuccess', handleMissedEvent);
-    self.addEventListener('canmakepayment', handleMissedEvent);
-    self.addEventListener('contentdelete', handleMissedEvent);
-    self.addEventListener('cookiechange', handleMissedEvent);
-    self.addEventListener('fetch', handleMissedEvent);
-    self.addEventListener('install', handleMissedEvent);
-    self.addEventListener('message', handleMissedEvent);
-    self.addEventListener('messageerror', handleMissedEvent);
-    self.addEventListener('notificationclick', handleMissedEvent);
-    self.addEventListener('notificationclose', handleMissedEvent);
-    self.addEventListener('paymentrequest', handleMissedEvent);
-    self.addEventListener('periodicsync', handleMissedEvent);
-    self.addEventListener('push', handleMissedEvent);
-    self.addEventListener('pushsubscriptionchange', handleMissedEvent);
-    self.addEventListener('sync', handleMissedEvent);
-    // This method will be called by Blazor WASM when it starts up to collect missed events and handle them
-    self.GetMissedServiceWorkerEvents = function () {
-        holdEvents = false;
-        var ret = missedServiceWorkerEvents;
-        missedServiceWorkerEvents = [];
-        return ret;
-    };
-}
-
 // location.href is this script
 // - location.href == 'https://localhost:7191/_content/SpawnDev.BlazorJS.WebWorkers/spawndev.blazorjs.webworkers.js?verbose=false'
 // or a service worker script
@@ -152,25 +80,9 @@ function getBWWURL(relativePath) {
     return new URL(relativePath, documentBaseURI).toString();
 }
 consoleLog('spawndev.blazorjs.webworkers: loading fake window environment');
-// faux DOM and document environment
-
-// importScripts available test
-function hasImportScripts() {
-    try {
-        importScripts(getBWWURL('spawndev.blazorjs.webworkers.empty.js?importScripts'));
-        return true;
-    } catch (e) {
-        return false;
-    }
-}
-var importScriptsSupported = hasImportScripts();
-if (!importScriptsSupported) {
-    consoleLog("importScripts is not supported. May be running in module mode.");
-} else {
-    consoleLog('importScripts is supported.');
-}
-
+// event holder for async blazor startup
 importScripts(getBWWURL('spawndev.blazorjs.webworkers.event-holder.js'));
+// faux DOM and document environment
 importScripts(getBWWURL('spawndev.blazorjs.webworkers.faux-env.js'));
 // faux dom and window environment has been created (currently empty)
 // set document.baseURI to the apps basePath (which is relative to this scripts path)
@@ -350,9 +262,16 @@ var initWebWorkerBlazor = async function () {
     // this method patches 'dynamic import scripts' to work in an environment that does not support 'dynamic import scripts'
     // it is designed for and tested with the Blazor WASM runtime.
     // it may not work on other modules
+    /**
+     * Patches a Blazor Javascript framework file at runtime to allow loading in a Web Worker, Shared Worker, or Service Worker.
+     * @param {string} jsStr The javascript file source code to patch
+     * @param {string} src The source URL of the javascript file
+     * @returns
+     */
     function fixModuleScript(jsStr, src) {
         // handle things that are automatically handled by import
         src = getAppURL(src);
+        //var srcFilename = new URL(src).pathname.split('/').pop();
         var scriptUrl = JSON.stringify(src);
         consoleLog('fixModuleScript.scriptUrl', src, scriptUrl);
         // fix import.meta.url - The full URL to the module

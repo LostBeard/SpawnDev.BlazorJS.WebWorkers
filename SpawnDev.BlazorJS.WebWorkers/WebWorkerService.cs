@@ -245,10 +245,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
                 ;
                 if (ServiceWorkerConfig == null) ServiceWorkerConfig = new ServiceWorkerConfig { Register = ServiceWorkerStartupRegistration.None };
-                if (string.IsNullOrEmpty(ServiceWorkerConfig.ScriptURL))
-                {
-                    ServiceWorkerConfig.ScriptURL = WebWorkerJSScript;
-                }
+                //if (string.IsNullOrEmpty(ServiceWorkerConfig.ScriptURL))
+                //{
+                //    ServiceWorkerConfig.ScriptURL = WebWorkerJSScript;
+                //}
                 Local = new ServiceCallDispatcher(WebAssemblyServices);
                 if (isTaskPoolWorker)
                 {
@@ -458,6 +458,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public event Action OnInstancesChanged;
         private bool InstanceLost(string instanceId, bool fireChangedEvent)
         {
+#if DEBUG
+            JS.Log($"Tentative InstanceLost: {instanceId}", Instances.Select(o => o.Info).ToList());
+#endif
             if (!_Instances.TryGetValue(instanceId, out var instance)) return false;
             if (instance.IsLocal) return false;
             _Instances.Remove(instanceId);
@@ -475,7 +478,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (_Instances.ContainsKey(instanceId)) return false;
             var instance = new AppInstance(this, instanceInfo);
             _Instances.Add(instanceId, instance);
-#if DEBUG
+#if DEBUG 
             JS.Log($"Instance found: {instanceId}", instanceInfo, Instances.Select(o => o.Info).ToList());
 #endif
             if (!instance.IsLocal)
