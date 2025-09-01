@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -85,12 +86,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
             _MethodInfo = methodInfo;
             Resolved = true;
         }
+
         /// <summary>
         /// Deserializes SerializableMethodInfoSlim instance from string using System.Text.Json<br />
         /// PropertyNameCaseInsensitive = true is used in deserialization
         /// </summary>
         /// <param name="json"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("")]
         public static SerializableMethodInfoSlim? FromString(string json)
         {
             var ret = string.IsNullOrEmpty(json) || !json.StartsWith("{") ? null : JsonSerializer.Deserialize<SerializableMethodInfoSlim>(json, DefaultJsonSerializerOptions);
@@ -177,11 +180,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <returns></returns>
         public static string SerializeMethodInfo(MethodInfo methodInfo) => new SerializableMethodInfoSlim(methodInfo).ToString();
         public static string SerializeMethodInfo(Delegate methodDeleate) => new SerializableMethodInfoSlim(methodDeleate.Method).ToString();
+
         /// <summary>
         /// Converts a MethodInfo that has been serialized using SerializeMethodInfo into a MethodInfo if serialization is successful or a null otherwise.
         /// </summary>
         /// <param name="serializableMethodInfoJson"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("")]
         public static MethodInfo? DeserializeMethodInfo(string serializableMethodInfoJson)
         {
             var tmp = FromString(serializableMethodInfoJson);

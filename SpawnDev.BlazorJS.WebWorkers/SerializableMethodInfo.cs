@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -103,21 +104,25 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 throw new Exception($"MethodBase type not supported: {methodBase.GetType().Name}");
             }
         }
+
         /// <summary>
         /// Deserializes SerializableMethodInfo instance from string using System.Text.Json<br />
         /// PropertyNameCaseInsensitive = true is used in deserialization
         /// </summary>
         /// <param name="json"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("")]
         public static SerializableMethodInfo? FromString(string json)
         {
             var ret = string.IsNullOrEmpty(json) || !json.StartsWith("{") ? null : JsonSerializer.Deserialize<SerializableMethodInfo>(json, DefaultJsonSerializerOptions);
             return ret;
         }
+
         /// <summary>
         /// Serializes SerializableMethodInfo to a string using System.Text.Json
         /// </summary>
         /// <returns></returns>
+        [RequiresUnreferencedCode("")]
         public override string ToString() => JsonSerializer.Serialize(this);
 
         internal static JsonSerializerOptions DefaultJsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };

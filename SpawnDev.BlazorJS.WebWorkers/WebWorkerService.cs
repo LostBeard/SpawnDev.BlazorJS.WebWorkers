@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SpawnDev.BlazorJS.JSObjects;
 using SpawnDev.BlazorJS.Toolbox;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Web;
 using Array = SpawnDev.BlazorJS.JSObjects.Array;
@@ -647,9 +648,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 await RegisterInstance();
             }
         }
+
         /// <summary>
         /// Returns true if this instance has notified other instances
         /// </summary>
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
         private async Task RegisterInstance()
         {
             if (InstanceRegistered || InstanceRegistering) return;
