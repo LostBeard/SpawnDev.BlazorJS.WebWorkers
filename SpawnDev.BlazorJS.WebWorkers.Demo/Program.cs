@@ -11,7 +11,10 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.Services.AddBlazorJSRuntime(out var JS);
 Console.WriteLine($">>> BlazorJS Running: {JS.GlobalScope.ToString()}");
 
-builder.Services.AddWebWorkerService();
+builder.Services.AddWebWorkerService(o =>
+{
+    o.RestoreEnvironment = false;   // true by default, set to false to leave the fake window environment in workers
+});
 
 builder.Services.RegisterServiceWorker<AppServiceWorker>(new ServiceWorkerConfig
 {
@@ -32,7 +35,8 @@ if (JS.IsWindow)
 var host = await builder.Build().StartBackgroundServices();
 
 
-JS.Set("_test", async (bool useModule) => {
+JS.Set("_test", async (bool useModule) =>
+{
     var webWorkerService = host.Services.GetRequiredService<WebWorkerService>();
     if (useModule)
     {

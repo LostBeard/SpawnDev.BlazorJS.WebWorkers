@@ -60,10 +60,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         public bool InterConnectEnabled { get; set; } = true;
         /// <summary>
-        /// If true, the faux window environment created to allow Blazor to load is cleaned up after the Blazor app has loaded.<br />
-        /// The default is true for compatibility with other libraries.
+        /// If true, the fake window environment created to allow Blazor to load is cleaned up after the Blazor app has loaded.<br />
+        /// The default is false for compatibility with other libraries.
         /// </summary>
-        public bool RestoreEnvironment { get; set; } = true;
+        public bool RestoreEnvironment { get; set; } = false;
         /// <summary>
         /// A ServiceCallDispatcher that executes on this instance
         /// </summary>

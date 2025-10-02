@@ -23,12 +23,20 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         protected ServiceWorkerGlobalScope? ServiceWorkerThis = null;
         /// <summary>
+        /// Blazor's asset manifest if it is found on global scope.<br/>
+        /// if (ServiceWorkerConfig.ImportServiceWorkerAssets == true) and the project is properly configured to generate an asset manifest file,<br/>
+        /// this will not be null in the service worker scope.
+        /// </summary>
+        public AssetManifest? AssetsManifest => _AssetsManifest.Value;
+        Lazy<AssetManifest?> _AssetsManifest;
+        /// <summary>
         /// ServiceWorkerEventHandler default constructor
         /// </summary>
         public ServiceWorkerEventHandler(BlazorJSRuntime js)
         {
             JS = js;
             ServiceWorkerThis = JS.ServiceWorkerThis;
+            _AssetsManifest = new Lazy<AssetManifest?>(() => JS.Get<AssetManifest?>("assetsManifest"));
         }
         async Task InitAsync()
         {
