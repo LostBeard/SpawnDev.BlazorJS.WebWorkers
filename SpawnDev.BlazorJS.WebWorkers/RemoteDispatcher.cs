@@ -154,13 +154,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
                 catch (Exception ex)
                 {
-                    JS.Log($"DataConnection_OnData: {ex.Message}");
+                    JS.Log($"DataConnection_OnData: {ex.ToString()}");
                 }
             }
             msg.Dispose();
         }
         /// <summary>
-        /// This method will be called be a call is sent to the remote dispatcher<br/>
+        /// This method will be called before a call is sent to the remote dispatcher<br/>
         /// If this method returns a non-empty string an exception will be thrown aborting the call
         /// </summary>
         /// <param name="methodInfo"></param>
@@ -537,8 +537,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             catch (Exception ex)
             {
-                //JS.Log($"HandleCall failed to rebuild the request method or args: {ex.Message}");
-                retError = $"HandleCallError: Failed to rebuild the request method or args: {ex.Message}";
+                //JS.Log($"HandleCall failed to rebuild the request method or args: {ex.ToString()}");
+                retError = $"HandleCallError: Failed to rebuild the request method or args: {ex.ToString()}";
                 goto SendResponse;
             }
             finally
@@ -549,11 +549,18 @@ namespace SpawnDev.BlazorJS.WebWorkers
             // get the instance for this call (if non-static)
             if (!methodInfo.IsStatic)
             {
-                instance = info == null ? null : await ScopedServiceProvider.GetServiceAsync(info!.ServiceType);
-                if (instance == null)
+                if (targetType != null && typeof(RemoteDispatcher).IsAssignableFrom(targetType))
                 {
-                    retError = "HandleCallError: Service not found";
-                    goto SendResponse;
+                    instance = this;
+                }
+                else
+                {
+                    instance = info == null ? null : await ScopedServiceProvider.GetServiceAsync(info!.ServiceType);
+                    if (instance == null)
+                    {
+                        retError = $"HandleCallError: Service not found: " + (targetType?.Name ?? "-");
+                        goto SendResponse;
+                    }
                 }
             }
             var deniedError = await CanCallCheck(methodInfo, remoteCallableAttr, info, instance);
@@ -600,7 +607,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             catch (Exception ex)
             {
-                JS.Log($"DataConnection.Send failed: {ex.Message}");
+                JS.Log($"DataConnection.Send failed: {ex.ToString()}");
             }
             finally
             {
@@ -620,7 +627,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         protected static string SerializeException(Exception exception)
         {
-            return exception.Message;
+            return exception.ToString();
         }
         protected static Exception DeserializeException(string exception)
         {
