@@ -156,9 +156,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
         private BroadcastChannel? SharedBroadcastChannel = null;
         private TaskCompletionSource? InstanceLock = null;
         /// <summary>
-        /// IWebAssemblyServices singleton
+        /// IBackgroundServiceManager singleton
         /// </summary>
-        public IWebAssemblyServices WebAssemblyServices { get; init; }
+        public IBackgroundServiceManager WebAssemblyServices { get; init; }
 
         NavigationManager NavigationManager;
         /// <summary>
@@ -166,7 +166,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         /// <param name="webAssemblyServices"></param>
         /// <param name="js"></param>
-        public WebWorkerService(IWebAssemblyServices webAssemblyServices, BlazorJSRuntime js, NavigationManager navigationManager)
+        public WebWorkerService(IBackgroundServiceManager webAssemblyServices, BlazorJSRuntime js, NavigationManager navigationManager)
         {
             JS = js;
             GlobalScope = JS.GlobalScope;

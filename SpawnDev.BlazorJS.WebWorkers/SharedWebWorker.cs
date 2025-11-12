@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using SpawnDev.BlazorJS.JSObjects;
+﻿using SpawnDev.BlazorJS.JSObjects;
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
@@ -12,7 +11,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         SharedWorker _shareWorker { get; set; }
         public string Name { get; }
-        public SharedWebWorker(string name, SharedWorker sharedWorker, IWebAssemblyServices webAssemblyServices) : base(webAssemblyServices, sharedWorker.Port)
+        public SharedWebWorker(string name, SharedWorker sharedWorker, IBackgroundServiceManager webAssemblyServices) : base(webAssemblyServices, sharedWorker.Port)
         {
             Name = name;
             _shareWorker = sharedWorker;

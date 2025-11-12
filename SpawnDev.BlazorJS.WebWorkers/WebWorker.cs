@@ -10,7 +10,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             Supported = !JS.IsUndefined("Worker");
         }
         Worker _worker;
-        public WebWorker(Worker worker, IWebAssemblyServices webAssemblyServices) : base(webAssemblyServices, worker)
+        public WebWorker(Worker worker, IBackgroundServiceManager webAssemblyServices) : base(webAssemblyServices, worker)
         {
             _worker = worker;
         }

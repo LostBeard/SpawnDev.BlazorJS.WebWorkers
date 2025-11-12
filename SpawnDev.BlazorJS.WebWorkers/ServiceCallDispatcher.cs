@@ -94,7 +94,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Returns true if a message port is used and it supports transferable objects
         /// </summary>
         public bool MessagePortSupportsTransferable { get; private set; }
-        public ServiceCallDispatcher(IWebAssemblyServices webAssemblyServices, IMessagePortSimple port)
+        public ServiceCallDispatcher(IBackgroundServiceManager webAssemblyServices, IMessagePortSimple port)
         {
             WebAssemblyServices = webAssemblyServices;
             ServiceProvider = webAssemblyServices.Services;
@@ -110,8 +110,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
             additionalCallArgs.Add(new CallSideParameter("caller", () => this, typeof(ServiceCallDispatcher)));
             LocalInfo = new ServiceCallDispatcherInfo { InstanceId = JS.InstanceId, GlobalThisTypeName = JS.GlobalThisTypeName };
         }
-        IWebAssemblyServices WebAssemblyServices;
-        public ServiceCallDispatcher(IWebAssemblyServices webAssemblyServices)
+        IBackgroundServiceManager WebAssemblyServices;
+        public ServiceCallDispatcher(IBackgroundServiceManager webAssemblyServices)
         {
             LocalInvoker = true;
             WebAssemblyServices = webAssemblyServices;
