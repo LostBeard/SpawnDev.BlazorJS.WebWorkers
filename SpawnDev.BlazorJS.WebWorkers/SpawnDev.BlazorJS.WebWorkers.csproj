@@ -109,10 +109,4 @@
 		<SupportedPlatform Include="browser" />
 	</ItemGroup>
 
-	<PropertyGroup>
-		<!-- Disable filename mangling with hash which is enabled by default in .Net 10 SDK. It causes runtime loading of Javascript files to fail due to unknown filename. -->
-		<StaticWebAssetFingerprintingEnabled>false</StaticWebAssetFingerprintingEnabled>
-		<StaticWebAssetsFingerprintContent>false</StaticWebAssetsFingerprintContent>
-	</PropertyGroup>
-
 </Project>
