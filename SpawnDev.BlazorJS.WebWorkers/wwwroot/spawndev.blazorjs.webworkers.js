@@ -27,7 +27,7 @@ var queryParams = new Proxy({}, {
 
 // a query param can be used to set the index.html file url
 var indexHtml = queryParams.indexHtml ?? './';
-if (typeof indexHtml === 'string' && ['true','1'].indexOf(indexHtml.toLowerCase()) !== -1) indexHtml = 'index.html';
+if (typeof indexHtml === 'string' && ['true', '1'].indexOf(indexHtml.toLowerCase()) !== -1) indexHtml = 'index.html';
 // below switches the indexHtml path to index.html if running in a browser extension
 var browserExtension = (self.browser && self.browser.runtime && self.browser.runtime.id) || (self.chrome && self.chrome.runtime && self.chrome.runtime.id) || location.href.indexOf('chrome-extension') === 0;
 if (browserExtension) indexHtml = 'index.html';
@@ -74,16 +74,21 @@ var documentBaseURI = (function () {
 consoleLog('documentBaseURI', documentBaseURI);
 
 function getAppURL(relativePath) {
-    return new URL(relativePath, documentBaseURI).toString();
-}
-function getBWWURL(relativePath) {
-    return new URL(relativePath, documentBaseURI).toString();
+    var ret = new URL(relativePath, documentBaseURI).toString();
+    if (self.indexImportMaps) {
+        for (var mapSet of self.indexImportMaps) {
+            if (mapSet.imports[ret]) {
+                return mapSet.imports[ret];
+            }
+        }
+    }
+    return ret;
 }
 consoleLog('spawndev.blazorjs.webworkers: loading fake window environment');
 // event holder for async blazor startup
-importScripts(getBWWURL('spawndev.blazorjs.webworkers.event-holder.js'));
+importScripts(getAppURL('spawndev.blazorjs.webworkers.event-holder.js'));
 // faux DOM and document environment
-importScripts(getBWWURL('spawndev.blazorjs.webworkers.faux-env.js'));
+importScripts(getAppURL('spawndev.blazorjs.webworkers.faux-env.js'));
 // faux dom and window environment has been created (currently empty)
 // set document.baseURI to the apps basePath (which is relative to this scripts path)
 document.baseURI = documentBaseURI;
@@ -99,7 +104,7 @@ async function hasDynamicImport() {
         return false;
     }
     try {
-        await import(getBWWURL('spawndev.blazorjs.webworkers.empty.js?import'));
+        await import(getAppURL('spawndev.blazorjs.webworkers.empty.js'));
         return true;
     } catch (e) {
         return false;
@@ -130,6 +135,8 @@ var initWebWorkerBlazor = async function () {
     }
     // TODO - detect pre-patched framework or read a config file that indicates state
     var WebWorkerEnabledAttributeName = 'webworker-enabled';
+    // set false here, but may be set to true if import maps are found in the index.html and need to be used
+    var importMapsFound = false;
     // detect if we need to use a patched framework
     var dynamicImportSupported = await hasDynamicImport();
     if (!dynamicImportSupported) {
@@ -206,7 +213,7 @@ var initWebWorkerBlazor = async function () {
                     var m = placeHolderPatt.exec(jsStr);
                     if (m) {
                         jsStr = jsStr.replace(placeHolderPatt, '$1setTimeout(()=>this.startWebAssemblyIfNotStarted(),0),');
-                        if (!dynamicImportSupported) {
+                        if (!dynamicImportSupported || importMapsFound) {
                             // fix dynamic imports
                             jsStr = fixModuleScript(jsStr, src);
                         }
@@ -227,7 +234,7 @@ var initWebWorkerBlazor = async function () {
                 if (typeof scriptNode.attributes[WebWorkerEnabledAttributeName] === 'undefined') {
                     scriptNode.attributes[WebWorkerEnabledAttributeName] = '';
                 }
-                if (!dynamicImportSupported) {
+                if (!dynamicImportSupported || importMapsFound) {
                     // load script text so we can do some on-the-fly patching to fix compatibility with WebWorkers
                     let jsStr = await getText(src);
                     if (prePatchedCheck(jsStr)) {
@@ -250,8 +257,9 @@ var initWebWorkerBlazor = async function () {
     }
     // if a strict content-security-policy prohibits 'unsafe-eval' the below method will not work... sciprts will need to be pre-processed (during publish/build step)
     // import shim used by code that is patched on the fly
-    self.importOverride = async function (src) {
-        consoleLog('importOverride', src);
+    self.importOverride = async function (callerSrc, src) {
+        consoleLog('importOverride', src, callerSrc);
+        src = new URL(src, callerSrc).toString();
         var jsStr = await getText(src);
         jsStr = fixModuleScript(jsStr, src);
         let fn = new Function(jsStr);
@@ -280,7 +288,7 @@ var initWebWorkerBlazor = async function () {
         // import.meta -> { url: SCRIPT_URL }
         jsStr = jsStr.replace(/\bimport\.meta\b/g, `{ url: ${scriptUrl} }`);
         // import -> importOverride ... importOverride can decide at runtime if it needs to use 'importScripts' or 'await import'
-        jsStr = jsStr.replace(/\bimport\(/g, 'importOverride(');
+        jsStr = jsStr.replace(/\bimport\(/g, `importOverride(${scriptUrl},`);
         // export
         // https://www.geeksforgeeks.org/what-is-export-default-in-javascript/
         // handle exports from
@@ -320,8 +328,40 @@ var initWebWorkerBlazor = async function () {
     }
     async function initializeBlazor() {
         // get index.html text for parsing
+        // .Net 10 adds the need to acquire the import map from the index.html
         var indexHtmlSrc = await getText(indexHtml);
         var scriptNodes = getScriptNodes(indexHtmlSrc);
+        // find any import maps
+        self.indexImportMaps = [];
+        for (var scriptNode of scriptNodes) {
+            if (scriptNode.attributes['type'] == 'importmap') {
+                try {
+                    let importMap = JSON.parse(scriptNode.text);
+                    let resolvedMaps = {};
+                    for (let k in importMap.imports) {
+                        let v = importMap.imports[k];
+                        let kUrl = new URL(k, documentBaseURI).toString();
+                        var vUrl = new URL(v, documentBaseURI).toString();
+                        resolvedMaps[kUrl] = vUrl;
+                    }
+                    Object.assign(importMap.imports, resolvedMaps);
+                    self.indexImportMaps.push(importMap);
+                    consoleLog('added importmap', importMap);
+                } catch (ex) {
+                    consoleLog('error parsing the importmap', ex);
+                }
+            }
+        }
+        importMapsFound = self.indexImportMaps && self.indexImportMaps.length;
+        if (importMapsFound) {
+            // when using importmaps,  importScripts is overriden to fix calls to aliases
+            let importScriptsOrig = self.importScripts;
+            self.importScripts = (url) => {
+                var realUrl = getAppURL(url);
+                consoleLog('importScripts', url, realUrl);
+                importScriptsOrig(realUrl);
+            }
+        }
         // detect runtime type and do runtime patching if needed
         var runtimeInfo = await detectBlazorRuntime(scriptNodes);
         consoleLog(`BlazorRuntimeType: '${runtimeInfo.runtime}' Prepatched: ${runtimeInfo.prepatched}`);

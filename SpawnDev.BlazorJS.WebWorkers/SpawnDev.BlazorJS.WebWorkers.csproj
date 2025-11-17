@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
 	<PropertyGroup>
-		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Version>2.24.0</Version>
@@ -66,6 +66,15 @@
 		<StaticWebAssetBasePath Condition="$(StaticWebAssetBasePath) == ''">/</StaticWebAssetBasePath>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<!-- 
+		Disable filename mangling with hash ("cache busting fingerprinting") which is enabled by default in .Net 10 SDK. 
+		It causes runtime loading of Javascript files to fail due to unknown filename.
+		-->
+		<StaticWebAssetFingerprintingEnabled>false</StaticWebAssetFingerprintingEnabled>
+		<StaticWebAssetsFingerprintContent>false</StaticWebAssetsFingerprintContent>
+	</PropertyGroup>
+
 	<ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.36" />
 		<PackageReference Include="System.Text.Json" Version="6.0.11" />
@@ -87,8 +96,13 @@
 		<PackageReference Include="System.Text.Json" Version="9.0.8" />
 	</ItemGroup>
 
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
+		<PackageReference Include="System.Text.Json" Version="10.0.0" />
+	</ItemGroup>
+
 	<ItemGroup>
-		<PackageReference Include="SpawnDev.BlazorJS" Version="2.43.0" />
+		<PackageReference Include="SpawnDev.BlazorJS" Version="2.44.0" />
 	</ItemGroup>
 
 	<ItemGroup>

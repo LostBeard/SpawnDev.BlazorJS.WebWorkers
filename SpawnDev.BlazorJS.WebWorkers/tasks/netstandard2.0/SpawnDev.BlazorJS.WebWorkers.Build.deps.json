@@ -10,7 +10,6 @@
       "SpawnDev.BlazorJS.WebWorkers.Build/2.5.5": {
         "dependencies": {
           "Microsoft.Build.Utilities.Core": "17.14.28",
-          "NETStandard.Library": "2.0.3",
           "System.Text.Json": "8.0.6"
         },
         "runtime": {
@@ -28,18 +27,8 @@
           }
         }
       },
-      "Microsoft.Build.Framework/17.14.28": {
-        "dependencies": {
-          "Microsoft.Win32.Registry": "5.0.0",
-          "System.Diagnostics.DiagnosticSource": "9.0.0",
-          "System.Memory": "4.6.0",
-          "System.Runtime.CompilerServices.Unsafe": "6.1.0",
-          "System.Security.Principal.Windows": "5.0.0"
-        }
-      },
       "Microsoft.Build.Utilities.Core/17.14.28": {
         "dependencies": {
-          "Microsoft.Build.Framework": "17.14.28",
           "Microsoft.NET.StringTools": "17.14.28",
           "Microsoft.Win32.Registry": "5.0.0",
           "System.Collections.Immutable": "9.0.0",
@@ -64,7 +53,6 @@
           }
         }
       },
-      "Microsoft.NETCore.Platforms/1.1.0": {},
       "Microsoft.Win32.Registry/5.0.0": {
         "dependencies": {
           "System.Buffers": "4.6.0",
@@ -77,11 +65,6 @@
             "assemblyVersion": "5.0.0.0",
             "fileVersion": "5.0.20.51904"
           }
-        }
-      },
-      "NETStandard.Library/2.0.3": {
-        "dependencies": {
-          "Microsoft.NETCore.Platforms": "1.1.0"
         }
       },
       "System.Buffers/4.6.0": {
@@ -253,13 +236,6 @@
       "path": "microsoft.bcl.asyncinterfaces/8.0.0",
       "hashPath": "microsoft.bcl.asyncinterfaces.8.0.0.nupkg.sha512"
     },
-    "Microsoft.Build.Framework/17.14.28": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-wRcyTzGV0LRAtFdrddtioh59Ky4/zbvyraP0cQkDzRSRkhgAQb0K88D/JNC6VHLIXanRi3mtV1jU0uQkBwmiVg==",
-      "path": "microsoft.build.framework/17.14.28",
-      "hashPath": "microsoft.build.framework.17.14.28.nupkg.sha512"
-    },
     "Microsoft.Build.Utilities.Core/17.14.28": {
       "type": "package",
       "serviceable": true,
@@ -274,26 +250,12 @@
       "path": "microsoft.net.stringtools/17.14.28",
       "hashPath": "microsoft.net.stringtools.17.14.28.nupkg.sha512"
     },
-    "Microsoft.NETCore.Platforms/1.1.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-kz0PEW2lhqygehI/d6XsPCQzD7ff7gUJaVGPVETX611eadGsA3A877GdSlU0LRVMCTH/+P3o2iDTak+S08V2+A==",
-      "path": "microsoft.netcore.platforms/1.1.0",
-      "hashPath": "microsoft.netcore.platforms.1.1.0.nupkg.sha512"
-    },
     "Microsoft.Win32.Registry/5.0.0": {
       "type": "package",
       "serviceable": true,
       "sha512": "sha512-dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg==",
       "path": "microsoft.win32.registry/5.0.0",
       "hashPath": "microsoft.win32.registry.5.0.0.nupkg.sha512"
-    },
-    "NETStandard.Library/2.0.3": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-st47PosZSHrjECdjeIzZQbzivYBJFv6P2nv4cj2ypdI204DO+vZ7l5raGMiX4eXMJ53RfOIg+/s4DHVZ54Nu2A==",
-      "path": "netstandard.library/2.0.3",
-      "hashPath": "netstandard.library.2.0.3.nupkg.sha512"
     },
     "System.Buffers/4.6.0": {
       "type": "package",
