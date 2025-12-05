@@ -102,7 +102,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="SpawnDev.BlazorJS" Version="2.44.0" />
+		<PackageReference Include="SpawnDev.BlazorJS" Version="2.47.0" />
 	</ItemGroup>
 
 	<ItemGroup>
