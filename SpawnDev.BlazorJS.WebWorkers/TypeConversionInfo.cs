@@ -195,6 +195,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     ret.Add(obj);
                 }
+                else if (obj is TypedArray typedArray)
+                {
+                    ret.Add(typedArray.Buffer);
+                }
                 else if (usePropertyReader)
                 {
                     foreach (var kvp in returnTypeProperties)
@@ -246,9 +250,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         {
                             propVal = prop.GetValue(obj);
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            var nmt = ex.Message;
+                            continue;
                         }
                         if (propVal == null) continue;
                         var conversionInfo = GetTypeConversionInfo(prop.PropertyType);
