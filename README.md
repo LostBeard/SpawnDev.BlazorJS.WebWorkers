@@ -278,7 +278,9 @@ public class MyService
 
 ### Using SharedCancellationToken to cancel a WebWorker task
 
-As of version 2.2.91 ```SharedCancellationToken``` is a supported parameter type and can be used to cancel a running task. SharedCancellationToken works in a similar way to CancellationToken. SharedCancellationTokenSource works in a similar way to CancellationTokenSource.
+As of version 2.2.91 ```SharedCancellationToken``` is a supported parameter type and can be used to cancel a running task. 
+- SharedCancellationToken works in a similar way to CancellationToken. 
+- SharedCancellationTokenSource works in a similar way to CancellationTokenSource.
 
 ```cs
 public async Task WebWorkerSharedCancellationTokenTest()
