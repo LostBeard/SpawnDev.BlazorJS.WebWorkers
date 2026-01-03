@@ -80,6 +80,8 @@ The WebWorkerService singleton contains many methods for working with multiple i
 - Once a WebWorker is started, debug breakpoints may not function as expected, or at all. Ideas on resolving this issue are appreciated. 
 
 #### SharedWebWorker console logs do not appear in the web page's developer console
+- Unlike dedicated workers, shared workers do not share console logs with the window that created them. 
+- To view the output from a SharedWebWorker in Chrome, you can view the chrome page at `chrome://inspect/#workers`
 - See [Important Note About SharedWebWorker](#important-note-about-sharedwebworker)
 
 ### Example WebWorkerService setup and usage. 
