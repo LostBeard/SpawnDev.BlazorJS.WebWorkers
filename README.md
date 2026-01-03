@@ -76,6 +76,12 @@ The WebWorkerService singleton contains many methods for working with multiple i
 - A lot of Blazor Razor Class Libraries use [JavaScript initializers](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/startup?view=aspnetcore-9.0#javascript-initializers) that load during the Blazor app's startup. The problem is, that Javascript expects to be running in a [Window](https://developer.mozilla.org/en-US/docs/Web/API/Window) context. This can cause startup errors when your app starts in a web worker or service worker.
 - See [Disabling RCL JavaScript initializers in WebWorkers](#disabling-rcl-javascript-initializers-in-webworkers) for a workaround.
 
+#### Debug breakpoints not being hit in WebWorkers
+- Once a WebWorker is started, debug breakpoints may not function as expected, or at all. Ideas on resolving this issue are appreciated. 
+
+#### SharedWebWorker console logs do not appear in the web page's developer console
+- See [Important Note About SharedWebWorker](#important-note-about-sharedwebworker)
+
 ### Example WebWorkerService setup and usage. 
 
 Program.cs  
@@ -472,6 +478,11 @@ var workerMathService = sharedWebWorker.GetService<IMathService>();
 // Call async methods on your shared worker service
 var result = await workerMathService.CalculatePi(piDecimalPlaces);
 ```
+
+### Important Note About SharedWebWorker
+SharedWebWorkers do not share console logs with the window that created them. This is a limitation of SharedWebWorkers in browsers. 
+Therefore, console logs from SharedWebWorkers will not appear in the web page's developer console. 
+To view the output from a SharedWebWorker in Chrome, you can view the chrome page at `chrome://inspect/#workers` and find the SharedWebWorker instance to see its console output.
 
 ## Send events
 ```cs
