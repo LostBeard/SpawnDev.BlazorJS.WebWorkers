@@ -387,7 +387,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                                     transferableList.Add(retValue);
                                 }
                             }
-                            // if it the return value wasn't already added to the transferables list (such as because it was required), check if it should be
+                            // if the return value wasn't already added to the transferables list (such as because it was required), check if it should be
                             if (!transferRequired && workerTransferSet == true)
                             {
                                 if (retValue is TypedArray typedArray)
