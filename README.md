@@ -511,28 +511,22 @@ webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
 ## Transferable Objects
 
 SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. Setting WorkerTransfer to true will cause the property, return value, or parameter value (or its transferable properties) to be added to the transfer list.
+- Transferable objects demo project: [WorkerTransferExample](https://github.com/LostBeard/WorkerTransferExample)
 
 Example
 ```cs
-public class ProcessFrameResult : IDisposable
-{
-    public ArrayBuffer? ArrayBuffer { get; set; }
-    public byte[]? HomographyBytes { get; set; }
-    public void Dispose(){
-        ArrayBuffer?.Dispose();
-    }
-}
-
 [return: WorkerTransfer]
-public async Task<ProcessFrameResult?> ProcessFrame([WorkerTransfer] ArrayBuffer? frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
+public async Task<ImageBitmap> ProcessFrame([WorkerTransfer] ArrayBuffer frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
 {
-    var ret = new ProcessFrameResult();
+    // ... process input ArrayBuffer data
+    ImageBitmap ret = ...;
     // ...
     return ret;
 }
 ```
 
-In the above example; the WorkerTransferAttribute on the return type set to `true` will cause transferable properties of the return type to be transferred.
+In the above example, the WorkerTransfer attribute on the `frameBuffer` parameter causes the `ArrayBuffer` to be transfered to the worker and
+the WorkerTransfer attribute on the return type will cause the `ImageData` return data to be transferred in the return `postMessage()`.
 
 ***Note***  
 Some transferable objects, like OffscreenCanvas, must be added to the transferables list or the call will fail due to Javascript requirements. WebWorkers will automatically add parameters of type `OffscreenCanvas` to the transferables list without requiring the WorkerTransfer attribute.
