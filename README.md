@@ -61,10 +61,10 @@ The WebWorkerService singleton contains many methods for working with multiple i
 - Communication with WebWorkers is done using [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage). Because postMessage is a Javascript method, the data passed to it will be serialized and deserialized using the JSRuntime serializer. While SpawnDev.BlazorJS does add support for additional data types, not all .Net types are supported. So calling methods with an unsupported parameter or return type will throw an exception.
 
 #### Why does the developer console show more than one Blazor startup message?
-- Those messages are from WebWorkers starting up. Workers share the window's console. Startup messages and other console messages from them is normal.
+- Those messages are from WebWorkers starting up. Workers share the window's console. Startup messages and other console messages from them is normal. Note: SharedWebWorkers do not share console logs with the window that created them. See [Important Note About SharedWebWorker](#important-note-about-sharedwebworker)
 
 #### When I change a static variable in a Window it does it not change in a worker. Why is that?
-- SpawnDev.BlazorJS.WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app. Static variables are not shared.
+- SpawnDev.BlazorJS.WebWorkers loads the Blazor WASM app in workers to allow running code in the background. This is more like starting multiple copies of an app and using inter-process communication than starting separate threads in the same app. Static variables are not shared, but can be accessed asynchronously using [Expressions](#expression-examples).
 
 #### When threading is officially added to Blazor WASM, will SpawnDev.BlazorJS.WebWorkers still be supported?
 - SpawnDev.BlazorJS.WebWorkers and official Blazor WASM multi-threading may overlap in some use cases but they do not overlap in all. As of writing, the in-progress Blazor WASM multi-threading cannot use Javascript interop in any threads except the main thread, which is a limitation that SpawnDev.BlazorJS.WebWorkers does not have. We expect official multi-threading to make WebWorkers more useful and we will continue to support and improve WebWorkers long after official multi-threading is added.
