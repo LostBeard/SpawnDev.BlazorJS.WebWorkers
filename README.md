@@ -538,20 +538,21 @@ In the above example; the WorkerTransferAttribute on the return type set to `tru
 Some transferable objects, like OffscreenCanvas, must be added to the transferables list or the call will fail due to Javascript requirements. WebWorkers will automatically add parameters of type `OffscreenCanvas` to the transferables list without requiring the WorkerTransfer attribute.
 
 ### Transferable JSObject types. Source [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects#supported_objects)
-- ArrayBuffer  
-- AudioData  
-- ImageBitmap  
-- MediaSourceHandle  
-- MessagePort  
-- MIDIAccess  
-- OffscreenCanvas  
-- ReadableStream  
-- RTCDataChannel  
-- TransformStream  
-- VideoFrame  
-- WebTransportReceiveStream  
-- WebTransportSendStream  
-- WritableStream  
+- [ArrayBuffer](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
+- [AudioData](https://developer.mozilla.org/en-US/docs/Web/API/AudioData)  
+- [ImageBitmap](https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap)  
+- [MediaSourceHandle](https://developer.mozilla.org/en-US/docs/Web/API/MediaSourceHandle)  
+- [MediaStreamTrack](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack)
+- [MessagePort](https://developer.mozilla.org/en-US/docs/Web/API/MessagePort)  
+- [MIDIAccess](https://developer.mozilla.org/en-US/docs/Web/API/MIDIAccess)  
+- [OffscreenCanvas](https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas)  
+- [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream)  
+- [RTCDataChannel](https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel)  
+- [TransformStream](https://developer.mozilla.org/en-US/docs/Web/API/TransformStream)  
+- [VideoFrame](https://developer.mozilla.org/en-US/docs/Web/API/VideoFrame)  
+- [WebTransportReceiveStream](https://developer.mozilla.org/en-US/docs/Web/API/WebTransportReceiveStream)  
+- [WebTransportSendStream](https://developer.mozilla.org/en-US/docs/Web/API/WebTransportSendStream)  
+- [WritableStream](https://developer.mozilla.org/en-US/docs/Web/API/WritableStream)  
 
 
 ## Javascript dependencies in WebWorkers
