@@ -44,6 +44,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             typeof(AudioData),
             typeof(ImageBitmap),
             typeof(MediaSourceHandle),
+            typeof(MediaStreamTrack),
             typeof(MessagePort),
             typeof(MIDIAccess),
             typeof(OffscreenCanvas),
