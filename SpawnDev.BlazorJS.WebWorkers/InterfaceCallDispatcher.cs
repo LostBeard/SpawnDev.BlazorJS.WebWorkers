@@ -63,6 +63,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <returns></returns>
         public static TServiceInterface CreateInterfaceDispatcher(object key, Func<Type, object?, MethodInfo, object?[]?, Task<object?>> keyedResolver, Func<Type, object?, MethodInfo, object?[]?, Task<object?>>? asyncKeyedResolver = null)
         {
+            if (!typeof(TServiceInterface).IsInterface) throw new Exception("InterfaceCallDispatcher can only be created for interface types");
             var ret = Create<TServiceInterface, InterfaceCallDispatcher<TServiceInterface>>();
             var proxy = (ret as InterfaceCallDispatcher<TServiceInterface>)!;
             proxy.KeyedResolver = keyedResolver;
@@ -80,6 +81,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <returns></returns>
         public static TServiceInterface CreateInterfaceDispatcher(object key, Func<Type, object, MethodInfo, object?[]?, Task<object?>> asyncKeyedResolver)
         {
+            if (!typeof(TServiceInterface).IsInterface) throw new Exception("InterfaceCallDispatcher can only be created for interface types");
             var ret = Create<TServiceInterface, InterfaceCallDispatcher<TServiceInterface>>();
             var proxy = (ret as InterfaceCallDispatcher<TServiceInterface>)!;
             proxy.AsyncKeyedResolver = asyncKeyedResolver;
@@ -96,6 +98,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <exception cref="Exception"></exception>
         public static TServiceInterface CreateInterfaceDispatcher(Func<Type, MethodInfo, object?[]?, Task<object?>> asyncResolver)
         {
+            if (!typeof(TServiceInterface).IsInterface) throw new Exception("InterfaceCallDispatcher can only be created for interface types");
             var ret = Create<TServiceInterface, InterfaceCallDispatcher<TServiceInterface>>();
             var proxy = ret as InterfaceCallDispatcher<TServiceInterface>;
             proxy!.AsyncResolver = asyncResolver;
@@ -110,6 +113,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <returns></returns>
         public static TServiceInterface CreateInterfaceDispatcher(Func<Type, MethodInfo, object?[]?, object?> resolver, Func<Type, MethodInfo, object?[]?, Task<object?>>? asyncResolver = null)
         {
+            if (!typeof(TServiceInterface).IsInterface) throw new Exception("InterfaceCallDispatcher can only be created for interface types");
             var ret = Create<TServiceInterface, InterfaceCallDispatcher<TServiceInterface>>();
             var proxy = (ret as InterfaceCallDispatcher<TServiceInterface>)!;
             proxy.AsyncResolver = asyncResolver;

@@ -178,20 +178,31 @@ namespace SpawnDev.BlazorJS.WebWorkers
         #region DispatchProxy
         Dictionary<Type, object> ServiceInterfaces = new Dictionary<Type, object>();
         /// <summary>
-        /// Returns a service call dispatcher that can call async methods using the returned interface
+        /// Returns a service call dispatcher that can call async methods using the returned interface<br/>
+        /// GetService can only access services via their registered interface
         /// </summary>
-        /// <typeparam name="TServiceInterface"></typeparam>
+        /// <typeparam name="TServiceInterface">Service interface</typeparam>
         /// <returns></returns>
         public TServiceInterface GetService<TServiceInterface>() where TServiceInterface : class
         {
             var typeofT = typeof(TServiceInterface);
+            if (!typeofT.IsInterface) throw new Exception("GetService can only access services via their registered interface");
             if (ServiceInterfaces.TryGetValue(typeofT, out var serviceWorker)) return (TServiceInterface)serviceWorker;
             var ret = InterfaceCallDispatcher<TServiceInterface>.CreateInterfaceDispatcher(Call);
             ServiceInterfaces[typeofT] = ret;
             return ret;
         }
+        /// <summary>
+        /// Returns a service call dispatcher that can call async methods using the returned interface<br/>
+        /// GetKeyedService can only access services via their registered interface
+        /// </summary>
+        /// <typeparam name="TServiceInterface"></typeparam>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public TServiceInterface GetKeyedService<TServiceInterface>(object key) where TServiceInterface : class
         {
+            var typeofT = typeof(TServiceInterface);
+            if (!typeofT.IsInterface) throw new Exception("GetKeyedService can only access services via their registered interface");
             return InterfaceCallDispatcher<TServiceInterface>.CreateInterfaceDispatcher(key, CallKeyed);
         }
         #endregion
