@@ -1,5 +1,4 @@
 ﻿using Microsoft.Build.Framework;
-using System;
 using System.IO;
 
 namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
@@ -9,17 +8,11 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
 
         public string ServiceWorkerAssetsManifest { get; set; }
 
-        //[Required]
-        //public ITaskItem[] StaticWebAsset { get; set; }
-
         [Required]
         public string ProjectDir { get; set; }
 
         [Required]
         public string OutputPath { get; set; }
-
-        //[Required]
-        //public string BasePath { get; set; }
 
         [Required]
         public string IntermediateOutputPath { get; set; }
