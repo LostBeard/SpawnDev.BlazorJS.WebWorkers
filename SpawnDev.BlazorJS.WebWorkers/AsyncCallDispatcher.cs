@@ -253,7 +253,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="args"></param>
         /// <returns></returns>
         public Task<object?> Call<TClass>(string methodName, object?[]? args = null) => Call(typeof(TClass), methodName, args);
-        public async Task<TResult> Call<TClass, TResult>(string methodName, object?[]? args = null) => (TResult)await Call(typeof(TClass), methodName, args);
+        /// <summary>
+        /// Call the method with the specified name on service type TClass
+        /// </summary>
+        /// <typeparam name="TClass"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="methodName"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public async Task<TResult> Call<TClass, TResult>(string methodName, object?[]? args = null) => (TResult)(await Call(typeof(TClass), methodName, args))!;
         #endregion
 
         #region Expressions
@@ -333,7 +341,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 var methodInfo = methodCallExpression.Method;
                 var serviceType = methodInfo.ReflectedType;
                 var args = methodCallExpression.Arguments.Select(arg => Expression.Lambda<Func<object>>(Expression.Convert(arg, typeof(object)), null).Compile()()).ToArray();
-                return Call(serviceType, methodInfo, args);
+                return Call(serviceType!, methodInfo, args);
             }
             else if (expr is MemberExpression memberExpression)
             {
@@ -348,7 +356,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             throw new Exception("Property getter does not exist.");
                         }
                         var serviceType = methodInfo.ReflectedType;
-                        return Call(serviceType, methodInfo);
+                        return Call(serviceType!, methodInfo);
                     }
                     else if (memberExpression.Member is FieldInfo fieldInfo)
                     {
@@ -367,7 +375,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             throw new Exception("Property setter does not exist.");
                         }
                         var serviceType = methodInfo.ReflectedType;
-                        return Call(serviceType, methodInfo, argsExt);
+                        return Call(serviceType!, methodInfo, argsExt);
                     }
                     else if (memberExpression.Member is FieldInfo fieldInfo)
                     {
@@ -389,6 +397,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Converts an Expression into a MethodInfo and a call arguments array<br />
         /// Then calls DispatchCall with them
         /// </summary>
+        /// <param name="serviceType"></param>
         /// <param name="expr"></param>
         /// <param name="argsExt"></param>
         /// <returns></returns>
@@ -449,6 +458,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
             }
         }
+        /// <summary>
+        /// Creates a new runtime service
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <param name="serviceType"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         protected Task Create(Expression expr, Type? serviceType)
         {
             if (expr is NewExpression newExpression)
@@ -468,6 +484,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 throw new Exception($"Unsupported dispatch call: {expr.GetType().Name}");
             }
         }
+        /// <summary>
+        /// Creates a new runtime keyed service
+        /// </summary>
+        /// <param name="expr"></param>
+        /// <param name="serviceKey"></param>
+        /// <param name="serviceType"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         protected Task CreateKeyed(Expression expr, object serviceKey, Type? serviceType)
         {
             if (expr is NewExpression newExpression)
@@ -549,7 +573,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TResult>(Expression<Func<TResult>> expr) => (TResult)await CallStatic(expr.Body);
+        public async Task<TResult> Run<TResult>(Expression<Func<TResult>> expr) => (TResult)(await CallStatic(expr.Body))!;
         // Func<...,Task<TResult>>
         /// <summary>
         /// Call a method or get the value of a property
@@ -557,7 +581,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TResult>(Expression<Func<Task<TResult>>> expr) => (TResult)await CallStatic(expr.Body);
+        public async Task<TResult> Run<TResult>(Expression<Func<Task<TResult>>> expr) => (TResult)(await CallStatic(expr.Body))!;
         // Func<...,ValueTask<TResult>>
         /// <summary>
         /// Call a method or get the value of a property
@@ -565,7 +589,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TResult>(Expression<Func<ValueTask<TResult>>> expr) => (TResult)await CallStatic(expr.Body);
+        public async Task<TResult> Run<TResult>(Expression<Func<ValueTask<TResult>>> expr) => (TResult)(await CallStatic(expr.Body))!;
         // Property set
         /// <summary>
         /// Set a property value
@@ -574,7 +598,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="expr"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public async Task Set<TProperty>(Expression<Func<TProperty>> expr, TProperty value) => await CallStatic(expr.Body, new object[] { value });
+        public async Task Set<TProperty>(Expression<Func<TProperty>> expr, TProperty value) => await CallStatic(expr.Body, new object[] { value! });
 
         // Instance
         // Method Calls and Property Getters
@@ -610,7 +634,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, TResult>> expr) => (TResult)await Call(typeof(TInstance), expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, TResult>> expr) => (TResult)(await Call(typeof(TInstance), expr.Body))!;
         // Func<...,Task<TResult>>
         /// <summary>
         /// Call a service method or get the value of a service property
@@ -619,7 +643,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await Call(typeof(TInstance), expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)(await Call(typeof(TInstance), expr.Body))!;
         // Func<...,ValueTask<TResult>>
         /// <summary>
         /// Call a service method or get the value of a service property
@@ -628,7 +652,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await Call(typeof(TInstance), expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)(await Call(typeof(TInstance), expr.Body))!;
         // Property set
         /// <summary>
         /// Set a service property value
@@ -638,7 +662,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="expr"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public async Task Set<TInstance, TProperty>(Expression<Func<TInstance, TProperty>> expr, TProperty value) => await Call(typeof(TInstance), expr.Body, new object[] { value });
+        public async Task Set<TInstance, TProperty>(Expression<Func<TInstance, TProperty>> expr, TProperty value) => await Call(typeof(TInstance), expr.Body, new object[] { value! });
         #endregion
         #region Keyed
 
@@ -680,7 +704,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="key"></param>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, TResult>> expr) => (TResult)await CallKeyed(typeof(TInstance), key, expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, TResult>> expr) => (TResult)(await CallKeyed(typeof(TInstance), key, expr.Body))!;
         // Func<...,Task<TResult>>
         /// <summary>
         /// Call a keyed service method or get the value of a keyed service property
@@ -690,7 +714,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="key"></param>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await CallKeyed(typeof(TInstance), key, expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)(await CallKeyed(typeof(TInstance), key, expr.Body))!;
         // Func<...,ValueTask<TResult>>
         /// <summary>
         /// Call a keyed service method or get the value of a keyed service property
@@ -700,7 +724,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="key"></param>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await CallKeyed(typeof(TInstance), key, expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(object key, Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)(await CallKeyed(typeof(TInstance), key, expr.Body))!;
         // Property set
         /// <summary>
         /// Set a keyed service property value
@@ -711,14 +735,27 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <param name="expr"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public async Task Set<TInstance, TProperty>(object key, Expression<Func<TInstance, TProperty>> expr, TProperty value) => await CallKeyed(typeof(TInstance), key, expr.Body, new object[] { value });
+        public async Task Set<TInstance, TProperty>(object key, Expression<Func<TInstance, TProperty>> expr, TProperty value) => await CallKeyed(typeof(TInstance), key, expr.Body, new object[] { value! });
         #endregion
         #endregion
 
         #region Lock
-        public event Action<AsyncCallDispatcher> OnUnlocked;
-        public event Action<AsyncCallDispatcher> OnLocked;
+        /// <summary>
+        /// Fired when the dispatcher is unlocked
+        /// </summary>
+        public event Action<AsyncCallDispatcher> OnUnlocked = default!;
+        /// <summary>
+        /// Fired when the dispatcher is locked
+        /// </summary>
+        public event Action<AsyncCallDispatcher> OnLocked = default!;
+        /// <summary>
+        /// Gets a value indicating whether the object is currently locked.
+        /// </summary>
         public bool IsLocked { get; private set; }
+        /// <summary>
+        /// Returns true if the lock was acquired
+        /// </summary>
+        /// <returns></returns>
         public bool AcquireLock()
         {
             if (IsLocked) return false;
@@ -727,6 +764,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
             OnLocked?.Invoke(this);
             return true;
         }
+        /// <summary>
+        /// Releases the lock if it is currently held.
+        /// </summary>
+        /// <remarks>If the lock is released, the OnUnlocked event is invoked. This method has no effect
+        /// if the lock is not currently held.</remarks>
+        /// <returns>true if the lock was successfully released; otherwise, false.</returns>
         public bool ReleaseLock()
         {
             if (!IsLocked) return false;
@@ -738,168 +781,393 @@ namespace SpawnDev.BlazorJS.WebWorkers
         #endregion
 
         #region Delegates
+        /// <summary>
+        /// Invokes the specified delegate asynchronously with the provided arguments and returns the result.
+        /// </summary>
+        /// <param name="methodDelegate">The delegate to be invoked. Must not be null.</param>
+        /// <param name="args">An array of arguments to pass to the delegate, or null if no arguments are required.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the value returned by the
+        /// delegate, or null if the delegate has no return value.</returns>
         protected virtual Task<object?> DispatchCall(Delegate methodDelegate, object?[]? args = null)
         {
             var methodInfo = methodDelegate.Method;
             var serviceType = methodInfo.ReflectedType;
-            return Call(serviceType, methodInfo, args);
+            return Call(serviceType!, methodInfo, args);
         }
 
         // Action
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke(Action methodDelegate)
             => await DispatchCall(methodDelegate, null);
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0>(Action<T0> methodDelegate, T0 arg0)
-            => DispatchCall(methodDelegate, new object[] { arg0 });
+            => DispatchCall(methodDelegate, new object[] { arg0! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1>(Action<T0, T1> methodDelegate, T0 arg0, T1 arg1)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2>(Action<T0, T1, T2> methodDelegate, T0 arg0, T1 arg1, T2 arg2)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3>(Action<T0, T1, T2, T3> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3, T4>(Action<T0, T1, T2, T3, T4> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3, T4, T5>(Action<T0, T1, T2, T3, T4, T5> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3, T4, T5, T6>(Action<T0, T1, T2, T3, T4, T5, T6> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7>(Action<T0, T1, T2, T3, T4, T5, T6, T7> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Action<T0, T1, T2, T3, T4, T5, T6, T7, T8> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Action<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Action<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-            => DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+            => DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9!, arg10! });
 
         // <TResult>
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
+        /// <param name="methodDelegate">Method to execute. Cannot be null.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
         public async Task<TResult> Invoke<TResult>(Func<TResult> methodDelegate)
-            => (TResult)await DispatchCall(methodDelegate, null);
+            => (TResult)(await DispatchCall(methodDelegate, null))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, TResult>(Func<T0, TResult> methodDelegate, T0 arg0)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, TResult>(Func<T0, T1, TResult> methodDelegate, T0 arg0, T1 arg1)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, TResult>(Func<T0, T1, T2, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, TResult>(Func<T0, T1, T2, T3, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, TResult>(Func<T0, T1, T2, T3, T4, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, TResult>(Func<T0, T1, T2, T3, T4, T5, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9!, arg10! }))!;
 
         // Task<TResult>
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<TResult>(Func<Task<TResult>> methodDelegate)
-            => (TResult)await DispatchCall(methodDelegate, null);
+            => (TResult)(await DispatchCall(methodDelegate, null))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, TResult>(Func<T0, Task<TResult>> methodDelegate, T0 arg0)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, TResult>(Func<T0, T1, Task<TResult>> methodDelegate, T0 arg0, T1 arg1)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, TResult>(Func<T0, T1, T2, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, TResult>(Func<T0, T1, T2, T3, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, TResult>(Func<T0, T1, T2, T3, T4, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, TResult>(Func<T0, T1, T2, T3, T4, T5, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, Task<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9!, arg10! }))!;
 
         // ValueTask<TResult>
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<TResult>(Func<ValueTask<TResult>> methodDelegate)
-            => (TResult)await DispatchCall(methodDelegate, null);
+            => (TResult)(await DispatchCall(methodDelegate, null))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, TResult>(Func<T0, ValueTask<TResult>> methodDelegate, T0 arg0)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, TResult>(Func<T0, T1, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, TResult>(Func<T0, T1, T2, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, TResult>(Func<T0, T1, T2, T3, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, T4, TResult>(Func<T0, T1, T2, T3, T4, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, T4, T5, TResult>(Func<T0, T1, T2, T3, T4, T5, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9! }))!;
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask<TResult> Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, ValueTask<TResult>> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-            => (TResult)await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+            => (TResult)(await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9!, arg10! }))!;
 
         // Task
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke(Func<Task> methodDelegate)
             => await DispatchCall(methodDelegate, null);
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, TResult>(Func<T0, Task> methodDelegate, T0 arg0)
-            => await DispatchCall(methodDelegate, new object[] { arg0 });
+            => await DispatchCall(methodDelegate, new object[] { arg0! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, TResult>(Func<T0, T1, Task> methodDelegate, T0 arg0, T1 arg1)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, TResult>(Func<T0, T1, T2, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, TResult>(Func<T0, T1, T2, T3, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, T4, TResult>(Func<T0, T1, T2, T3, T4, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, T4, T5, TResult>(Func<T0, T1, T2, T3, T4, T5, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, T4, T5, T6, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async Task Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, Task> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9!, arg10! });
 
         // ValueTask
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke(Func<ValueTask> methodDelegate)
             => await DispatchCall(methodDelegate, null);
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0>(Func<T0, ValueTask> methodDelegate, T0 arg0)
-            => await DispatchCall(methodDelegate, new object[] { arg0 });
+            => await DispatchCall(methodDelegate, new object[] { arg0! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1>(Func<T0, T1, ValueTask> methodDelegate, T0 arg0, T1 arg1)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2>(Func<T0, T1, T2, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3>(Func<T0, T1, T2, T3, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3, T4>(Func<T0, T1, T2, T3, T4, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3, T4, T5>(Func<T0, T1, T2, T3, T4, T5, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3, T4, T5, T6>(Func<T0, T1, T2, T3, T4, T5, T6, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3, T4, T5, T6, T7>(Func<T0, T1, T2, T3, T4, T5, T6, T7, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9! });
+        /// <summary>
+        /// Invokes the specified method asynchronously within the current dispatch context.
+        /// </summary>
         public async ValueTask Invoke<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Func<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, ValueTask> methodDelegate, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-            => await DispatchCall(methodDelegate, new object[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10 });
+            => await DispatchCall(methodDelegate, new object[] { arg0!, arg1!, arg2!, arg3!, arg4!, arg5!, arg6!, arg7!, arg8!, arg9!, arg10! });
         #endregion
     }
 }
