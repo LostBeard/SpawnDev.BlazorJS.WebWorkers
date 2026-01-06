@@ -102,7 +102,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TResult>(Expression<Func<TResult>> expr) => (TResult)await CallExpression(expr.Body);
+        public async Task<TResult> Run<TResult>(Expression<Func<TResult>> expr) => (TResult)(await CallExpression(expr.Body))!;
         // Func<...,Task<TResult>>
         /// <summary>
         /// Asynchronously call a method
@@ -110,7 +110,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TResult>(Expression<Func<Task<TResult>>> expr) => (TResult)await CallExpression(expr.Body);
+        public async Task<TResult> Run<TResult>(Expression<Func<Task<TResult>>> expr) => (TResult)(await CallExpression(expr.Body))!;
         // Func<...,ValueTask<TResult>>
         /// <summary>
         /// Asynchronously call a method
@@ -118,18 +118,18 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TResult>(Expression<Func<ValueTask<TResult>>> expr) => (TResult)await CallExpression(expr.Body);
+        public async Task<TResult> Run<TResult>(Expression<Func<ValueTask<TResult>>> expr) => (TResult)(await CallExpression(expr.Body))!;
         // Property set
         /// <summary>
         /// Set property value<br/>
         /// Ex<br/>
-        /// await caller.Set&let;AsyncCallDispatcherTest, string>(s => s.IITestProp1, "Yay!");
+        /// await caller.Set&lt;AsyncCallDispatcherTest, string>(s => s.IITestProp1, "Yay!");
         /// </summary>
         /// <typeparam name="TProperty"></typeparam>
         /// <param name="expr"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public async Task Set<TProperty>(Expression<Func<TProperty>> expr, TProperty value) => await CallExpression(expr.Body, new object[] { value });
+        public async Task Set<TProperty>(Expression<Func<TProperty>> expr, TProperty value) => await CallExpression(expr.Body, new object[] { value! });
         // Instance
         // Method Calls and Property Getters
         // Action
@@ -164,7 +164,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, TResult>> expr) => (TResult)await CallExpression(expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, TResult>> expr) => (TResult)(await CallExpression(expr.Body))!;
         // Func<...,Task<TResult>>
         /// <summary>
         /// Asynchronously call a method
@@ -173,7 +173,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)await CallExpression(expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, Task<TResult>>> expr) => (TResult)(await CallExpression(expr.Body))!;
         // Func<...,ValueTask<TResult>>
         /// <summary>
         /// Asynchronously call a method
@@ -182,19 +182,19 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TResult"></typeparam>
         /// <param name="expr"></param>
         /// <returns></returns>
-        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)await CallExpression(expr.Body);
+        public async Task<TResult> Run<TInstance, TResult>(Expression<Func<TInstance, ValueTask<TResult>>> expr) => (TResult)(await CallExpression(expr.Body))!;
         // Property set
         /// <summary>
         /// Set property value<br/>
         /// Ex<br/>
-        /// await caller.Set&let;AsyncCallDispatcherTest, string&gt;(s =&gt; s.IITestProp1, "Yay!");
+        /// await caller.Set&lt;AsyncCallDispatcherTest, string&gt;(s =&gt; s.IITestProp1, "Yay!");
         /// </summary>
         /// <typeparam name="TInstance"></typeparam>
         /// <typeparam name="TProperty"></typeparam>
         /// <param name="expr"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public async Task Set<TInstance, TProperty>(Expression<Func<TInstance, TProperty>> expr, TProperty value) => await CallExpression(expr.Body, new object[] { value });
+        public async Task Set<TInstance, TProperty>(Expression<Func<TInstance, TProperty>> expr, TProperty value) => await CallExpression(expr.Body, new object[] { value! });
         #endregion
     }
 }

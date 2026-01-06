@@ -67,7 +67,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// A ServiceCallDispatcher that executes on this instance
         /// </summary>
-        public ServiceCallDispatcher Local { get; }
+        public ServiceCallDispatcher Local { get; } = default!;
         /// <summary>
         /// An instance of IServiceProvider this service belongs to
         /// </summary>
@@ -79,7 +79,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// The baseUri of this Blazor app
         /// </summary>
-        public string AppBaseUri { get; }
+        public string AppBaseUri { get; } = "";
         /// <summary>
         /// Returns true if this service has been initialized
         /// </summary>
@@ -111,7 +111,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// The instance of BlazorJSRuntime this service uses
         /// </summary>
-        public BlazorJSRuntime JS { get; }
+        public BlazorJSRuntime JS { get; } = default!;
         /// <summary>
         /// The current global scope
         /// </summary>
@@ -120,7 +120,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// If WebWorkers are supported it dispatches on a free WebWorker in the WebWorkerPool<br />
         /// If WebWorkers are not supported it dispatches on the local scope
         /// </summary>
-        public WebWorkerPool TaskPool { get; }
+        public WebWorkerPool TaskPool { get; } = default!;
         /// <summary>
         /// If this scope is a Window it dispatches on this scope<br />
         /// If this scope is a WebWorker and its parent is a Window it will dispatch on the parent's scope<br />
@@ -140,7 +140,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// AppInstanceInfo for this app instance
         /// </summary>
-        public AppInstanceInfo Info { get; }
+        public AppInstanceInfo Info { get; } = default!;
         /// <summary>
         /// Returns true if this instance has notified other instances it exists
         /// </summary>
@@ -164,8 +164,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Creates a new instance of WebWorkerService
         /// </summary>
-        /// <param name="webAssemblyServices"></param>
-        /// <param name="js"></param>
         public WebWorkerService(IBackgroundServiceManager webAssemblyServices, BlazorJSRuntime js, NavigationManager navigationManager)
         {
             JS = js;
@@ -173,7 +171,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             InstanceId = JS.InstanceId;
             NavigationManager = navigationManager;
             WebAssemblyServices = webAssemblyServices;
-            ServiceProvider = WebAssemblyServices.Services;
+            ServiceProvider = WebAssemblyServices.Services!;
             ServiceDescriptors = WebAssemblyServices.Descriptors;
             if (JS.IsBrowser)
             {
@@ -318,7 +316,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         private class InterconnectIncomingMessage
         {
-            public AppInstanceInfo FromInstanceInfo { get; set; }
+            public AppInstanceInfo FromInstanceInfo { get; set; } = default!;
             public long Time { get; set; }
         }
         private void Interconnect_OnMessage(MessageEvent messageEvent)
@@ -395,7 +393,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         const string AllInstancedId = "*";
         internal void BroadcastCall(string targetInstanceId, string cmd, params object?[]? args)
         {
-            var allArgs = new List<object>();
+            var allArgs = new List<object?>();
             allArgs.Add(targetInstanceId);
             allArgs.Add(Info);
             allArgs.Add(cmd);
@@ -426,15 +424,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Fired after the service worker registration finishes successfully
         /// </summary>
-        public event Action<ServiceWorkerRegistration> OnServiceWorkerRegistered;
+        public event Action<ServiceWorkerRegistration> OnServiceWorkerRegistered = default!;
         /// <summary>
         /// The updatefound event of the ServiceWorkerRegistration interface is fired any time the ServiceWorkerRegistration.installing property acquires a new service worker.
         /// </summary>
-        public event Action OnServiceWorkerUpdateFound;
+        public event Action OnServiceWorkerUpdateFound = default!;
         /// <summary>
         /// This event fires if this instance is running in a WebWorker when the connection to the parent has been established
         /// </summary>
-        public event Action OnDedicatedWorkerParentReady;
+        public event Action OnDedicatedWorkerParentReady = default!;
         /// <summary>
         /// A list of running instances including this one<br/>
         /// Instances allows calling into any running instance
@@ -448,15 +446,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// Fires when a new instance is found
         /// </summary>
-        public event Action<AppInstance> OnInstanceFound;
+        public event Action<AppInstance> OnInstanceFound = default!;
         /// <summary>
         /// Fires when an instance is no longer running
         /// </summary>
-        public event Action<AppInstance> OnInstanceLost;
+        public event Action<AppInstance> OnInstanceLost = default!;
         /// <summary>
         /// Fires when one or more instances have been found or lost
         /// </summary>
-        public event Action OnInstancesChanged;
+        public event Action OnInstancesChanged = default!;
         private bool InstanceLost(string instanceId, bool fireChangedEvent)
         {
 #if DEBUG
@@ -790,9 +788,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         /// <summary>
         /// Creates a new a WebWorker instance and returns.<br/>
-        /// The property WhenReady will complete when Blazor is loaded and ready in the worker
+        /// The property WhenReady will complete when Blazor is loaded and ready in the worker.<br/>
+        /// Use Expressions, interface proxies, etc. to make calls into the worker.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>WebWorker or null if not supported.</returns>
         public WebWorker? GetWebWorkerSync(Dictionary<string, string>? queryParams = null)
         {
             if (!WebWorkerSupported) return null;
@@ -814,6 +813,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
             return webWorker;
         }
 
+        /// <summary>
+        /// Creates a new a WebWorker instance and returns it when it is ready.<br/>
+        /// Use Expressions, interface proxies, etc. to make calls into the worker.
+        /// </summary>
+        /// <returns>WebWorker or null if not supported.</returns>
         public async Task<WebWorker?> GetWebWorker(WebWorkerOptions webWorkerOptions)
         {
             var webWorker = GetWebWorkerSync(webWorkerOptions);
@@ -822,6 +826,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
             return webWorker;
         }
 
+        /// <summary>
+        /// Creates a new a WebWorker instance and returns.<br/>
+        /// The property WhenReady will complete when Blazor is loaded and ready in the worker.<br/>
+        /// Use Expressions, interface proxies, etc. to make calls into the worker.
+        /// </summary>
+        /// <returns>WebWorker or null if not supported.</returns>
         public WebWorker? GetWebWorkerSync(WebWorkerOptions webWorkerOptions)
         {
             if (!WebWorkerSupported) return null;
@@ -844,6 +854,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var webWorker = new WebWorker(worker, WebAssemblyServices);
             return webWorker;
         }
+        /// <summary>
+        /// Creates a new a SharedWebWorker instance and returns the SharedWebWorekr when it is ready.<br/>
+        /// Use Expressions, interface proxies, etc. to make calls into the worker.
+        /// </summary>
+        /// <returns>SharedWebWorker or null if not supported.</returns>
         public async Task<SharedWebWorker?> GetSharedWebWorker(SharedWebWorkerOptions webWorkerOptions)
         {
             var webWorker = GetSharedWebWorkerSync(webWorkerOptions);
@@ -851,6 +866,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
             await webWorker.WhenReady;
             return webWorker;
         }
+        /// <summary>
+        /// Creates a new a SharedWebWorker instance and returns.<br/>
+        /// The property WhenReady will complete when Blazor is loaded and ready in the worker.<br/>
+        /// Use Expressions, interface proxies, etc. to make calls into the worker.
+        /// </summary>
+        /// <returns>SharedWebWorker or null if not supported.</returns>
         public SharedWebWorker? GetSharedWebWorkerSync(SharedWebWorkerOptions webWorkerOptions)
         {
             if (!WebWorkerSupported) return null;
@@ -876,7 +897,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
 
         /// <summary>
-        /// Returns a new SharedWebWorker instance. If a SharedWorker already existed by this name SharedWebWorker will be connected to that instance.
+        /// Returns a new SharedWebWorker instance. If a SharedWorker already existed by this name SharedWebWorker will be connected to that instance.<br/>        /// 
         /// </summary>
         /// <param name="sharedWorkerName">SharedWebWorkers are identified by name. 1 shared worker will be created per name.</param>
         /// <returns></returns>
@@ -981,7 +1002,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 // running in a window
                 // use window.open
-                using var window = JS.WindowThis!.Open(newWindowUrl, target, windowFeatures);
+                using var window = JS.WindowThis!.Open(newWindowUrl, target!, windowFeatures!);
             }
             else if (JS.ServiceWorkerThis != null)
             {

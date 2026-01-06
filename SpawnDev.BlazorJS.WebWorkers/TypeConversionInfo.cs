@@ -10,7 +10,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
     public class TypeConversionInfo
     {
         public Type ReturnType { get; private set; }
-        public bool useIJSWrapperReader { get; private set; }
         public bool usePropertyReader { get; private set; }
         public bool useJSObjectReader { get; private set; }
         public bool useIterationReader { get; private set; }

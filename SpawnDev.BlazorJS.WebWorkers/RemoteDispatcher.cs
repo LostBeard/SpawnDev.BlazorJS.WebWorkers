@@ -11,6 +11,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
     /// </summary>
     public abstract class RemoteDispatcher : AsyncCallDispatcherSlim, IDisposable
     {
+        /// <summary>
+        /// 
+        /// </summary>
         public ClaimsPrincipal User { get; protected set; } = new ClaimsPrincipal(new ClaimsIdentity(nameof(RemoteDispatcher), ClaimTypes.Name, ClaimTypes.Role));
         protected TaskCompletionSource WhenReadySource { get; set; } = new TaskCompletionSource();
         public Task WhenReady => WhenReadySource.Task;

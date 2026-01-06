@@ -8,10 +8,10 @@
         /// <summary>
         /// Assets
         /// </summary>
-        public List<ManifestAsset> Assets { get; set; }
+        public List<ManifestAsset> Assets { get; set; } = default!;
         /// <summary>
         /// Version
         /// </summary>
-        public string Version { get; set; }
+        public string Version { get; set; } = default!;
     }
 }

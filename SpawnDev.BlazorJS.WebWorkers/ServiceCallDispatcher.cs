@@ -37,6 +37,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
             public string Id { get; set; } = Guid.NewGuid().ToString();
             public string RequestId { get; set; } = "";
             public Type[] ParameterTypes { get; set; }
+            public CallbackAction(Delegate target, string requestId, Type[] parameterTypes)
+            {
+                Target = target;
+                RequestId = requestId;
+                ParameterTypes = parameterTypes;
+            }
         }
 
         /// <summary>
@@ -51,7 +57,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Returns true if the object type is Transferable
         /// </summary>
         public static bool IsTransferable<T>(T obj) => IsTransferable(typeof(T));
+        /// <summary>
+        /// Gets or sets the message port used for communication with support for transferable objects
+        /// </summary>
         protected IMessagePort? _port { get; set; }
+        /// <summary>
+        /// Simple message port, used if _port is not available
+        /// </summary>
         protected IMessagePortSimple? _portSimple { get; set; }
         /// <summary>
         /// Returns true if the target of this dispatcher is this instance
@@ -69,18 +81,38 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Returns true if there is at least 1 request waiting for a result
         /// </summary>
         public bool WaitingForResponse => _waiting.Count > 0;
+        /// <summary>
+        /// Static access to BlazorJSRuntime
+        /// </summary>
         protected static BlazorJSRuntime JS => BlazorJSRuntime.JS;
         Dictionary<string, TaskCompletionSource<Array>> _waiting = new Dictionary<string, TaskCompletionSource<Array>>();
-        protected IServiceProvider ServiceProvider;
-        protected IServiceCollection ServiceDescriptors;
+        /// <summary>
+        /// Provides access to the application's service provider for resolving dependencies.
+        /// </summary>
+        /// <remarks>Intended for use by derived classes to obtain services registered in the
+        /// application's dependency injection container. The lifetime and scope of resolved services depend on the
+        /// configuration of the underlying service provider.</remarks>
+        protected IServiceProvider ServiceProvider { get; }
+        /// <summary>
+        /// Provides access to the collection of service descriptors used for dependency injection configuration.
+        /// </summary>
+        /// <remarks>This field is intended for use by derived classes to register or modify services
+        /// within the application's dependency injection container. Modifying this collection affects the services
+        /// available for injection throughout the application.</remarks>
+        protected IServiceCollection ServiceDescriptors { get; }
         /// <summary>
         /// Returns true if a message port is used and it supports transferable objects
         /// </summary>
         public bool MessagePortSupportsTransferable { get; private set; }
+        /// <summary>
+        /// Creates a new ServiceCallDispatcher that connects to the given message port
+        /// </summary>
+        /// <param name="webAssemblyServices"></param>
+        /// <param name="port"></param>
         public ServiceCallDispatcher(IBackgroundServiceManager webAssemblyServices, IMessagePortSimple port)
         {
             WebAssemblyServices = webAssemblyServices;
-            ServiceProvider = webAssemblyServices.Services;
+            ServiceProvider = webAssemblyServices.Services!;
             ServiceDescriptors = webAssemblyServices.Descriptors;
             if (port is IMessagePort messagePort)
             {
@@ -94,11 +126,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
             LocalInfo = new ServiceCallDispatcherInfo { InstanceId = JS.InstanceId, GlobalThisTypeName = JS.GlobalThisTypeName };
         }
         IBackgroundServiceManager WebAssemblyServices;
+        /// <summary>
+        /// Creates a new ServiceCallDispatcher that only invokes local services
+        /// </summary>
+        /// <param name="webAssemblyServices"></param>
         public ServiceCallDispatcher(IBackgroundServiceManager webAssemblyServices)
         {
             LocalInvoker = true;
             WebAssemblyServices = webAssemblyServices;
-            ServiceProvider = webAssemblyServices.Services;
+            ServiceProvider = webAssemblyServices.Services!;
             ServiceDescriptors = webAssemblyServices.Descriptors;
             additionalCallArgs.Add(new CallSideParameter("caller", () => this, typeof(ServiceCallDispatcher)));
             LocalInfo = new ServiceCallDispatcherInfo { InstanceId = JS.InstanceId, GlobalThisTypeName = JS.GlobalThisTypeName };
@@ -114,7 +150,13 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Completes when connection has been established
         /// </summary>
         public Task WhenReady => _oninit.Task;
-        private bool ReadyFlagSent = false;
+        /// <summary>
+        /// Set to true once the ready flag has been sent
+        /// </summary>
+        public bool ReadyFlagSent { get; private set; } = false;
+        /// <summary>
+        /// Sends the ready flag to the remote endpoint<br/>
+        /// </summary>
         public void SendReadyFlag()
         {
             if (_portSimple == null) return;
@@ -122,9 +164,20 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var needsInfo = RemoteInfo == null;
             _portSimple.PostMessage(new object?[] { "init", LocalInfo, needsInfo });
         }
-        public event Action<ServiceCallDispatcher, Array> OnMessage;
+        /// <summary>
+        /// Fired when a message event is received from the remote endpoint<br/>
+        /// </summary>
+        public event Action<ServiceCallDispatcher, Array> OnMessage = default!;
+        /// <summary>
+        /// Busy state changed delegate<br/>
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="busy"></param>
         public delegate void BusyStateChangedDelegate(ServiceCallDispatcher sender, bool busy);
-        public event BusyStateChangedDelegate OnBusyStateChanged;
+        /// <summary>
+        /// Fired when the busy state changes<br/>
+        /// </summary>
+        public event BusyStateChangedDelegate OnBusyStateChanged = default!;
         private bool _busy = false;
         private void CheckBusyStateChanged(bool fire = false)
         {
@@ -143,6 +196,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 OnBusyStateChanged?.Invoke(this, _busy);
             }
         }
+        /// <summary>
+        /// Handles incoming messages from the remote endpoint<br/>
+        /// </summary>
+        /// <param name="e"></param>
         protected async void _worker_OnMessage(MessageEvent e)
         {
             try
@@ -224,14 +281,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         {
                             var serviceTypeName = args.Shift<string>();
                             var serviceType = TypeExtensions.GetType(serviceTypeName);
-                            await HandleCallMessage(serviceType, args, false);
+                            await HandleCallMessage(serviceType!, args, false);
                         }
                         break;
                     case "msg":
                         {
                             var serviceTypeName = args.Shift<string>();
                             var serviceType = TypeExtensions.GetType(serviceTypeName);
-                            await HandleCallMessage(serviceType, args, true);
+                            await HandleCallMessage(serviceType!, args, true);
                         }
                         break;
                     case "callKeyed":
@@ -241,7 +298,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             var keyTypeName = args.Shift<string>();
                             var keyType = TypeExtensions.GetType(keyTypeName);
                             var key = args.Shift(keyType!);
-                            await HandleCallMessage(serviceType, args, false, true, key);
+                            await HandleCallMessage(serviceType!, args, false, true, key);
                         }
                         break;
                     case "msgKeyed":
@@ -251,7 +308,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             var keyTypeName = args.Shift<string>();
                             var keyType = TypeExtensions.GetType(keyTypeName);
                             var key = args.Shift(keyType!);
-                            await HandleCallMessage(serviceType, args, true, true, key);
+                            await HandleCallMessage(serviceType!, args, true, true, key);
                         }
                         break;
                 }
@@ -660,12 +717,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     if (IsAction(coreType))
                     {
-                        var cb = new CallbackAction
-                        {
-                            RequestId = requestId,
-                            ParameterTypes = genericTypes,
-                            Target = argDelegate,
-                        };
+                        var cb = new CallbackAction(argDelegate, requestId, genericTypes);
                         _actionHandles[cb.Id] = cb;
                         ret[i] = cb.Id;
                     }
@@ -850,8 +902,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             public object? ServiceKey { get; set; }
             public bool IsKeyed { get; set; }
-            public Type ServiceType { get; set; }
-            public Type ImplementationType { get; set; }
+            public Type ServiceType { get; set; } = default!;
+            public Type ImplementationType { get; set; } = default!;
             public object? Service { get; set; }
         }
         List<RuntimeService> RuntimeServices = new List<RuntimeService>();
@@ -920,7 +972,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             var keyType = key?.GetType();
             using var jsKey = key == null ? null : JS.ReturnMe<JSObject>(key);
-            var added = await Run(() => _AddKeyedService(serviceType, implementationType, keyType, jsKey));
+            var added = await Run(() => _AddKeyedService(serviceType, implementationType, keyType!, jsKey));
             return added;
         }
         private async Task<bool> _AddService(Type serviceType, Type implementationType)
@@ -938,7 +990,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         private async Task<bool> _AddKeyedService(Type serviceType, Type implementationType, Type keyType, JSObject? jsKey)
         {
             var key = keyType == null ? null : jsKey?.JSRef?.As(keyType);
-            var service = await FindServiceAsync(serviceType, key);
+            var service = await FindServiceAsync(serviceType, key!);
             if (service != null) return false;
             RuntimeServices.Add(new RuntimeService
             {
@@ -1102,10 +1154,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             runtimeServiceInfo = new RuntimeService
             {
-                ImplementationType = implementationType ?? serviceType,
+                ImplementationType = (implementationType ?? serviceType)!,
                 ServiceKey = serviceKey,
                 IsKeyed = isKeyed,
-                ServiceType = serviceType ?? implementationType,
+                ServiceType = (serviceType ?? implementationType)!,
             };
             if (argTypes == null || argTypes.Length == 0 || args == null || args.Length == 0)
             {
@@ -1126,7 +1178,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 if (constructorInfo != null)
                 {
-                    var callArgs = await PostDeserializeArgs(null, constructorInfo, args);
+                    var callArgs = await PostDeserializeArgs(null!, constructorInfo, args);
                     runtimeServiceInfo.Service = constructorInfo.Invoke(callArgs);// ActivatorUtilities.CreateInstance(ServiceProvider, runtimeServiceInfo.ImplementationType, callArgs);
                 }
                 else
@@ -1146,7 +1198,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <returns></returns>
         public override Task CreateService(ConstructorInfo constructorInfo, Type? serviceType, object[]? args)
         {
-            return CreateKeyedService(constructorInfo, serviceType, null, args);
+            return CreateKeyedService(constructorInfo, serviceType, null!, args);
         }
         /// <summary>
         /// Create a new runtime keyed service
@@ -1159,19 +1211,19 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <exception cref="Exception"></exception>
         public override async Task CreateKeyedService(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
         {
-            var implementationType = constructorInfo.ReflectedType;
+            var implementationType = constructorInfo.ReflectedType!;
             var argTypes = constructorInfo.GetParameters().Select(o => o.ParameterType).ToArray();
             if (LocalInvoker)
             {
                 var isKeyed = serviceKey != null;
                 if (serviceKey != null)
                 {
-                    var serviceDescriptor = ServiceDescriptors.FindKeyedServiceDescriptor(serviceType, serviceKey!, true);
+                    var serviceDescriptor = ServiceDescriptors.FindKeyedServiceDescriptor(serviceType!, serviceKey!, true);
                     if (serviceDescriptor != null) throw new Exception("Service already exists");
                 }
                 else
                 {
-                    var serviceDescriptor = ServiceDescriptors.FindServiceDescriptor(serviceType, true);
+                    var serviceDescriptor = ServiceDescriptors.FindServiceDescriptor(serviceType!, true);
                     if (serviceDescriptor != null) throw new Exception("Service already exists");
                 }
                 var runtimeServiceInfo = RuntimeServices.FirstOrDefault(o => o.ServiceType == serviceType && o.IsKeyed == isKeyed && (!isKeyed || Object.Equals(o.ServiceKey, serviceKey)));
@@ -1182,7 +1234,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 runtimeServiceInfo = new RuntimeService
                 {
                     ServiceType = serviceType ?? implementationType,
-                    ImplementationType = implementationType ?? serviceType,
+                    ImplementationType = implementationType ?? serviceType!,
                     ServiceKey = serviceKey,
                     IsKeyed = isKeyed,
                 };
@@ -1210,12 +1262,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
             else
             {
                 if (!WhenReady.IsCompleted) await WhenReady;
-                var preparedArgs = PreSerializeArgs(null, constructorInfo, args, out var transferables);
+                var preparedArgs = PreSerializeArgs(null!, constructorInfo, args, out var transferables);
                 using var argsArray = JS.ReturnMe<Array>(preparedArgs);
                 using var jsKey = serviceKey == null ? null : JS.ReturnMe<JSObject>(serviceKey);
                 var keyType = serviceKey?.GetType();
                 var constructorInfoJson = SerializableMethodInfo.SerializeMethodInfo(constructorInfo);
-                await Run(() => _CreateKeyedService(constructorInfoJson, serviceType, implementationType, keyType, jsKey, argsArray, argTypes, transferables));
+                await Run(() => _CreateKeyedService(constructorInfoJson, serviceType!, implementationType, keyType, jsKey, argsArray, argTypes, transferables));
             }
         }
         async Task<object?> FindServiceAsync(Type serviceType)
@@ -1258,7 +1310,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (fromKeyedServiceAttr != null)
             {
                 var serviceKey = fromKeyedServiceAttr.Key;
-                value = await FindServiceAsync(methodParam.ParameterType, serviceKey);
+                value = await FindServiceAsync(methodParam.ParameterType, serviceKey!);
                 return (true, value);
             }
             // call side
@@ -1279,6 +1331,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// Returns true if this instance has been disposed
         /// </summary>
         public bool IsDisposed { get; private set; } = false;
+        /// <summary>
+        /// Clean up resources
+        /// </summary>
+        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
             if (IsDisposed) return;
@@ -1299,17 +1355,33 @@ namespace SpawnDev.BlazorJS.WebWorkers
             Dispose(false);
             GC.SuppressFinalize(this);
         }
-        public static Action<T0> CreateTypedActionT1<T0>(Action<object?[]> arg) => new Action<T0>((t0) => arg(new object[] { t0 }));
-        public static Action<T0, T1> CreateTypedActionT2<T0, T1>(Action<object?[]> arg) => new Action<T0, T1>((t0, t1) => arg(new object[] { t0, t1 }));
-        public static Action<T0, T1, T2> CreateTypedActionT3<T0, T1, T2>(Action<object?[]> arg) => new Action<T0, T1, T2>((t0, t1, t2) => arg(new object[] { t0, t1 }));
-        public static Action<T0, T1, T2, T3> CreateTypedActionT4<T0, T1, T2, T3>(Action<object?[]> arg) => new Action<T0, T1, T2, T3>((t0, t1, t2, t3) => arg(new object[] { t0, t1, t2, t3 }));
-        public static Action<T0, T1, T2, T3, T4> CreateTypedActionT5<T0, T1, T2, T3, T4>(Action<object?[]> arg) => new Action<T0, T1, T2, T3, T4>((t0, t1, t2, t3, t4) => arg(new object[] { t0, t1, t2, t3, t4 }));
+        /// <summary>
+        /// Creates a typed Action
+        /// </summary>
+        public static Action<T0> CreateTypedActionT1<T0>(Action<object?[]> arg) => new Action<T0>((t0) => arg(new object[] { t0! }));
+        /// <summary>
+        /// Creates a typed Action
+        /// </summary>
+        public static Action<T0, T1> CreateTypedActionT2<T0, T1>(Action<object?[]> arg) => new Action<T0, T1>((t0, t1) => arg(new object[] { t0!, t1! }));
+        /// <summary>
+        /// Creates a typed Action
+        /// </summary>
+        public static Action<T0, T1, T2> CreateTypedActionT3<T0, T1, T2>(Action<object?[]> arg) => new Action<T0, T1, T2>((t0, t1, t2) => arg(new object[] { t0!, t1!, t2! }));
+        /// <summary>
+        /// Creates a typed Action
+        /// </summary>
+        public static Action<T0, T1, T2, T3> CreateTypedActionT4<T0, T1, T2, T3>(Action<object?[]> arg) => new Action<T0, T1, T2, T3>((t0, t1, t2, t3) => arg(new object[] { t0!, t1!, t2!, t3! }));
+        /// <summary>
+        /// Creates a typed Action
+        /// </summary>
+        public static Action<T0, T1, T2, T3, T4> CreateTypedActionT5<T0, T1, T2, T3, T4>(Action<object?[]> arg) => new Action<T0, T1, T2, T3, T4>((t0, t1, t2, t3, t4) => arg(new object[] { t0!, t1!, t2!, t3!, t4! }));
         private object CreateTypedAction(Type[] typ1, Action<object?[]> arg)
         {
             var method = typeof(ServiceCallDispatcher).GetMethod($"CreateTypedActionT{typ1.Length}", BindingFlags.Public | BindingFlags.Static);
+            if (method == null) throw new Exception("CreateTypedAction: Unable to find method with given paramter count.");
             var gmeth = method.MakeGenericMethod(typ1);
             var genericAction = gmeth.Invoke(null, new object[] { arg });
-            return genericAction;
+            return genericAction!;
         }
     }
 }

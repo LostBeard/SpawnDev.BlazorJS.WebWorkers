@@ -55,7 +55,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 return (Exception)Activator.CreateInstance(exTypeCached)!;
             }
-            catch (Exception ex)
+            catch
             {
                 ExceptionTypes[typeName] = null;
                 return new Exception(serializedException);

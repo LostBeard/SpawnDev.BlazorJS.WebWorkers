@@ -2,28 +2,6 @@
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
-    ///// <summary>
-    ///// Configuration data with information a new instance will use on startup
-    ///// </summary>
-    //public class InstanceConfiguration
-    //{
-    //    /// <summary>
-    //    /// The configuration id of this instance
-    //    /// </summary>
-    //    public string ConfigId { get; set; }
-    //    /// <summary>
-    //    /// The InstanceId of the instance that created this config
-    //    /// </summary>
-    //    public string OwnerId { get; set; }
-    //    /// <summary>
-    //    /// When this config was created
-    //    /// </summary>
-    //    public DateTimeOffset Created { get; set; }
-    //    /// <summary>
-    //    /// The path to load
-    //    /// </summary>
-    //    public string? Url { get; set; }
-    //}
     /// <summary>
     /// Information about an instance of a Blazor app
     /// </summary>
@@ -32,7 +10,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// The instance's instanceId, a unique and randomly generated Guid string created during BlazorJSRuntime startup 
         /// </summary>
-        public string InstanceId { get; set; }
+        public string InstanceId { get; set; } = default!;
         /// <summary>
         /// The InstanceId of the instance that created this instance (if one)
         /// </summary>
@@ -44,18 +22,17 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <summary>
         /// The instance's location at startup
         /// </summary>
-        public string Url { get; set; }
+        public string Url { get; set; } = default!;
         /// <summary>
         /// The instance's app baseUri
         /// </summary>
-        public string BaseUrl { get; set; }
+        public string BaseUrl { get; set; } = default!;
         /// <summary>
         /// The scope the instance is running in
         /// </summary>
         public GlobalScope Scope { get; set; }
         /// <summary>
         /// The name property of the global scope. In shared workers, this is the shared worker name used when there were created.
-        /// </summary>
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Name { get; set; }

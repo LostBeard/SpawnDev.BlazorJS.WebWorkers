@@ -10,7 +10,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
     public class AppInstance : AsyncCallDispatcher
     {
         List<ServiceCallDispatcher> IncomingConnections = new List<ServiceCallDispatcher>();
-        WebWorkerService? WebWorkerService = null;
+        WebWorkerService WebWorkerService;
         ServiceCallDispatcher? _Dispatcher = null;
         /// <summary>
         /// Returns true if the Dispatcher has been loaded
@@ -174,44 +174,53 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     _Dispatcher = null;
                 }
             }
-            WebWorkerService = null;
         }
+        /// <inheritdoc/>
         public override Task<object?> Call(Type serviceType, MethodInfo methodInfo, object?[]? args = null)
         {
             return Dispatcher!.Call(serviceType, methodInfo, args);
         }
+        /// <inheritdoc/>
         public override Task<object?> CallKeyed(Type serviceType, object serviceKey, MethodInfo methodInfo, object?[]? args = null)
         {
             return Dispatcher!.CallKeyed(serviceType, serviceKey, methodInfo, args);
         }
+        /// <inheritdoc/>
         public override Task CreateService(ConstructorInfo constructorInfo, Type? serviceType, object[]? args)
         {
             return Dispatcher!.CreateService(constructorInfo, serviceType, args);
         }
+        /// <inheritdoc/>
         public override Task CreateKeyedService(ConstructorInfo constructorInfo, Type? serviceType, object serviceKey, object[]? args)
         {
             return Dispatcher!.CreateKeyedService(constructorInfo, serviceType, serviceKey, args);
         }
+        /// <inheritdoc/>
         public override Task<bool> RemoveKeyedService(Type serviceType, object key)
         {
             return Dispatcher!.RemoveKeyedService(serviceType, key);
         }
+        /// <inheritdoc/>
         public override Task<bool> RemoveService(Type serviceType)
         {
             return Dispatcher!.RemoveService(serviceType);
         }
+        /// <inheritdoc/>
         public override Task<bool> KeyedServiceExists(Type serviceType, object key)
         {
             return Dispatcher!.KeyedServiceExists(serviceType, key);
         }
+        /// <inheritdoc/>
         public override Task<bool> ServiceExists(Type serviceType)
         {
             return Dispatcher!.ServiceExists(serviceType);
         }
+        /// <inheritdoc/>
         public override Task<bool> AddKeyedService(Type serviceType, Type implementationType, object key)
         {
             return Dispatcher!.AddKeyedService(serviceType, implementationType, key);
         }
+        /// <inheritdoc/>
         public override Task<bool> AddService(Type serviceType, Type implementationType)
         {
             return Dispatcher!.AddService(serviceType, implementationType);
