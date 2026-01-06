@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SpawnDev.BlazorJS.JSObjects;
-using SpawnDev.BlazorJS.JSObjects.WebRTC;
 using System.Reflection;
 using Array = SpawnDev.BlazorJS.JSObjects.Array;
 
@@ -39,27 +38,11 @@ namespace SpawnDev.BlazorJS.WebWorkers
             public string RequestId { get; set; } = "";
             public Type[] ParameterTypes { get; set; }
         }
-        static List<Type> _transferableTypes { get; } = new List<Type> {
-            typeof(ArrayBuffer),
-            typeof(AudioData),
-            typeof(ImageBitmap),
-            typeof(MediaSourceHandle),
-            typeof(MediaStreamTrack),
-            typeof(MessagePort),
-            typeof(MIDIAccess),
-            typeof(OffscreenCanvas),
-            typeof(ReadableStream),
-            typeof(RTCDataChannel),
-            typeof(TransformStream),
-            typeof(VideoFrame),
-            typeof(WebTransportReceiveStream),
-            typeof(WebTransportSendStream),
-            typeof(WritableStream),
-        };
+
         /// <summary>
         /// Returns true if the type is Transferable
         /// </summary>
-        public static bool IsTransferable(Type type) => _transferableTypes.Contains(type);
+        public static bool IsTransferable(Type type) => TransferableAttribute.IsTransferable(type);
         /// <summary>
         /// Returns true if the type is Transferable
         /// </summary>
@@ -90,7 +73,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         Dictionary<string, TaskCompletionSource<Array>> _waiting = new Dictionary<string, TaskCompletionSource<Array>>();
         protected IServiceProvider ServiceProvider;
         protected IServiceCollection ServiceDescriptors;
-        //IServiceScope? ConnectionScope;
         /// <summary>
         /// Returns true if a message port is used and it supports transferable objects
         /// </summary>
@@ -281,6 +263,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 JS.Log($"ERROR stack trace: {ex.StackTrace}");
             }
         }
+        /// <summary>
+        /// Executes the call message and sends the result back if needed
+        /// </summary>
+        /// <param name="serviceType"></param>
+        /// <param name="args"></param>
+        /// <param name="noReply"></param>
+        /// <param name="keyed"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
         async Task HandleCallMessage(Type serviceType, Array args, bool noReply, bool keyed = false, object? key = null)
         {
             string requestId = "";
@@ -357,56 +348,24 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         }
                         else if (methodInfo != null)
                         {
-                            bool? workerTransferSet = null;
-                            var finalReturnType = methodInfo.GetFinalReturnType();
+                            //var finalReturnType = methodInfo.GetFinalReturnType();
+                            var retValueType = retValue.GetType();
                             var returnParameter = methodInfo.ReturnParameter;
                             // check for WorkerTransfer attribute on the method return value
-                            var transferAttr = Attribute.GetCustomAttribute(returnParameter, typeof(WorkerTransferAttribute), true) as WorkerTransferAttribute;
-                            if (transferAttr != null)
+                            var transferAttr = returnParameter.GetCustomAttribute<WorkerTransferAttribute>(true);
+                            var workerTransferSet = transferAttr?.Transfer;
+                            if (workerTransferSet != false)
                             {
-                                // the method return value has WorkerTransfer attribute
-                                workerTransferSet = transferAttr.Transfer;
-                            }
-                            // if not found, check for WorkerTransfer attribute on the returned type
-                            else if (finalReturnType.IsClass)
-                            {
-                                var transferAttrType = returnParameter.GetCustomAttribute<WorkerTransferAttribute>(true);
-                                if (transferAttrType != null)
-                                {
-                                    // the returned type has WorkerTransfer attribute
-                                    workerTransferSet = transferAttrType.Transfer;
-                                }
-                            }
-                            var transferRequired = false;
-                            // checks if the type must be transferred (like OffscreenCanvas)
-                            if (finalReturnType.IsClass)
-                            {
-                                var transferableAttribute = finalReturnType.GetCustomAttribute<TransferableAttribute>(true);
-                                if (transferableAttribute?.TransferRequired == true)
-                                {
-                                    transferRequired = true;
-                                    transferableList.Add(retValue);
-                                }
-                            }
-                            // if the return value wasn't already added to the transferables list (such as because it was required), check if it should be
-                            if (!transferRequired && workerTransferSet == true)
-                            {
-                                if (retValue is TypedArray typedArray)
-                                {
-                                    var arrayBuffer = typedArray.Buffer;
-                                    transferableList.Add(arrayBuffer);
-                                }
-                                else
-                                {
-                                    // get transferables from the type conversion info
-                                    var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(finalReturnType);
-                                    var propTransferable = conversionInfo.GetTransferablePropertyValues(retValue);
-                                    transferableList.AddRange(propTransferable);
-                                }
+                                var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(retValueType);
+                                var propTransferable = conversionInfo.GetTransferablePropertyValues(retValue, workerTransferSet);
+                                transferableList.AddRange(propTransferable);
                             }
                         }
                     }
                     var callbackMsg = new object?[] { "callback", requestId, err, retValue };
+#if DEBUG
+                    JS.Log("worker.postMessage", callbackMsg, transferableList.ToArray());
+#endif
                     if (_port != null) _port.PostMessage(callbackMsg, transferableList.ToArray());
                     else _portSimple?.PostMessage(callbackMsg);
                 }
@@ -679,30 +638,21 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 JS.Log($"genericTypeStr: {genericTypeStr}");
 #endif
                 var coreType = genericType ?? methodParamType;
-                var workerTransferSet = false;
-                var isTransferList = Attribute.IsDefined(methodParamInfo, typeof(TransferableListAttribute));
-                if (methodParamType.IsClass)
-                {
-                    var transferAttr = (WorkerTransferAttribute?)methodParamInfo.GetCustomAttribute(typeof(WorkerTransferAttribute), true);
-                    if (transferAttr?.Transfer == true)
-                    {
-                        // this property has been marked as transferable
-                        workerTransferSet = true;
-                    }
-                }
-                var methodParamTypeName = methodParamInfo.ParameterType.Name;
+                //var methodParamTypeName = methodParamInfo.ParameterType.Name;
                 var genericTypes = methodParamType.GenericTypeArguments;
                 // check if it is a [TransferableList] object[] parameter
                 if (transferableListAttributeParameter == methodParamInfo && arg is IEnumerable<object> objectArray)
                 {
                     transferableList.AddRange(objectArray);
                     // the parameter data is not actually passed, the parameter exists to tell the sender what data should be added to the transferables list
+                    // ret[i] = null;
                     continue;
                 }
                 if (IsCallSideParameter(methodParamInfo))
                 {
                     // resolved on the other side
                     // skip item ...
+                    // ret[i] = null;
                     continue;
                 }
                 else if (arg is Delegate argDelegate && !string.IsNullOrEmpty(requestId))
@@ -761,35 +711,25 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     transferableList.Add(uint8Array.Buffer);
                     ret[i] = uint8Array;
                 }
-                else
+                else if (!transferableListAttributeFound)
                 {
-                    if (methodParamType.IsClass)
+                    // if a transfer list was not found...
+                    // Add required transferables like OffscreenCanvas
+                    // Add optional transferables enabled by WorkerTransfer attribute on the method parameter, the class type, or its properties
+                    var workerTransferAttribute = methodParamInfo.GetCustomAttribute<WorkerTransferAttribute>(true);
+                    var workerTransferSet = workerTransferAttribute?.Transfer;
+                    if (workerTransferSet != false)
                     {
-                        var transferableAttribute = methodParamType.GetCustomAttribute<TransferableAttribute>(true);
-                        if (transferableAttribute != null)
-                        {
-                            // some transferable types MUST be transferred to be sent to a worker (Ex. OffscreenCanvas)
-                            if (workerTransferSet || (transferableAttribute.TransferRequired && !transferableListAttributeFound))
-                            {
-                                transferableList.Add(arg);
-                                ret[i] = arg;
-                                continue;
-                            }
-                        }
-                        else if (workerTransferSet && arg is TypedArray typedArray)
-                        {
-                            var arrayBuffer = typedArray.Buffer;
-                            transferableList.Add(arrayBuffer);
-                            ret[i] = arg;
-                            continue;
-                        }
-                    }
-                    if (workerTransferSet)
-                    {
-                        var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(methodParamType);
-                        var propTransferable = conversionInfo.GetTransferablePropertyValues(arg);
+                        var maxDepth = workerTransferSet == true ? 3 : 1;
+                        var argType = arg.GetType();
+                        var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(argType);
+                        var propTransferable = conversionInfo.GetTransferablePropertyValues(arg, workerTransferSet, maxDepth);
                         transferableList.AddRange(propTransferable);
                     }
+                    ret[i] = arg;
+                }
+                else
+                {
                     ret[i] = arg;
                 }
             }
