@@ -352,19 +352,20 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             var retValueType = retValue.GetType();
                             var returnParameter = methodInfo.ReturnParameter;
                             // check for WorkerTransfer attribute on the method return value
-                            var transferAttr = returnParameter.GetCustomAttribute<WorkerTransferAttribute>(true);
-                            var workerTransferSet = transferAttr?.Transfer;
-                            if (workerTransferSet != false)
+                            var transferAttr = returnParameter.GetCustomAttribute<WorkerTransferAttribute>(true) ?? WorkerTransferAttribute.TransferRequiredDefault;
+                            var workerTransferSet = transferAttr.Transfer;
+                            if (workerTransferSet != WorkerTransferMode.TransferNone)
                             {
+                                var maxDepth = transferAttr.Depth;
                                 var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(retValueType);
-                                var propTransferable = conversionInfo.GetTransferablePropertyValues(retValue, workerTransferSet);
+                                var propTransferable = conversionInfo.GetTransferablePropertyValues(retValue, workerTransferSet, maxDepth);
                                 transferableList.AddRange(propTransferable);
                             }
                         }
                     }
                     var callbackMsg = new object?[] { "callback", requestId, err, retValue };
 #if DEBUG
-                    JS.Log("worker.postMessage", callbackMsg, transferableList.ToArray());
+                    JS.Log("worker.postMessage", new object[] { callbackMsg, transferableList.ToArray() });
 #endif
                     if (_port != null) _port.PostMessage(callbackMsg, transferableList.ToArray());
                     else _portSimple?.PostMessage(callbackMsg);
@@ -716,12 +717,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     // if a transfer list was not found...
                     // Add required transferables like OffscreenCanvas
                     // Add optional transferables enabled by WorkerTransfer attribute on the method parameter, the class type, or its properties
-                    var workerTransferAttribute = methodParamInfo.GetCustomAttribute<WorkerTransferAttribute>(true);
-                    var workerTransferSet = workerTransferAttribute?.Transfer;
-                    if (workerTransferSet != false)
+                    var workerTransferAttribute = methodParamInfo.GetCustomAttribute<WorkerTransferAttribute>(true) ?? WorkerTransferAttribute.TransferRequiredDefault;
+                    var workerTransferSet = workerTransferAttribute.Transfer;
+                    if (workerTransferSet != WorkerTransferMode.TransferNone)
                     {
-                        var maxDepth = workerTransferSet == true ? 3 : 1;
                         var argType = arg.GetType();
+                        var maxDepth = workerTransferAttribute.Depth;
                         var conversionInfo = TypeConversionInfo.GetTypeConversionInfo(argType);
                         var propTransferable = conversionInfo.GetTransferablePropertyValues(arg, workerTransferSet, maxDepth);
                         transferableList.AddRange(propTransferable);

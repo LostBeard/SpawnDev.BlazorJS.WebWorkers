@@ -1,7 +1,6 @@
 ﻿using Microsoft.JSInterop;
 using SpawnDev.BlazorJS.JSObjects;
 using System.Collections;
-using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -28,14 +27,22 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public Dictionary<string, PropertyInfo> returnTypeProperties { get; private set; } = new Dictionary<string, PropertyInfo>();
         public bool IsTransferable => TransferableAttribute != null;
         public bool IsTransferableOrHasTransferableDescendants => IsTransferable || HasTransferableDescendants;
+        public bool IsTransferRequiredOrHasTransferRequiredDescendants => IsTransferRequired || HasTransferRequiredDescendants;
         public bool IsTransferRequired => TransferableAttribute?.TransferRequired == true;
         public TransferableAttribute? TransferableAttribute { get; private set; }
         public WorkerTransferAttribute? WorkerTransferAttribute { get; private set; }
-        public bool? WorkerTransferDesired => WorkerTransferAttribute?.Transfer;
-        static List<Type> IgnoreInterfaces = new List<Type> {
+        static List<Type> IgnoreInterfaces = new List<Type> 
+        {
             typeof(IJSInProcessObjectReference),
             typeof(IJSObjectReference),
             typeof(IJSStreamReference),
+        };
+        static List<Type> DefaultReaderTypes = new List<Type>
+        {
+            typeof(Type),
+            typeof(object),
+            typeof(string),
+            typeof(void),
         };
         static JsonNamingPolicy JsonNamingPolicy = JsonNamingPolicy.CamelCase;
         static string GetPropertyJSName(PropertyInfo prop)
@@ -61,12 +68,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (ProcessStarted) return;
             ProcessStarted = true;
             var returnType = ReturnType;
-            if (typeof(Type).IsAssignableFrom(returnType))
+            if (returnType.IsValueType || DefaultReaderTypes.Contains(returnType))
             {
                 useDefaultReader = true;
                 return;
             }
-            else if (returnType.IsValueType || returnType == typeof(string))
+            else if (typeof(Type).IsAssignableFrom(returnType))
             {
                 useDefaultReader = true;
                 return;
@@ -188,34 +195,44 @@ namespace SpawnDev.BlazorJS.WebWorkers
 
         public bool HasTransferableDescendants => AllTransferableSubTypes.Any();
 
+        public bool HasTransferRequiredDescendants => AllTransferableSubTypes.Values.Any(o => o.TransferRequired);
+
         public bool HasTransferableChildren => TransferableSubTypes.Any();
 
         public Dictionary<Type, TransferableAttribute> AllTransferableSubTypes => AllTransferableSubTypesLazy!.Value;
         Lazy<Dictionary<Type, TransferableAttribute>>? AllTransferableSubTypesLazy = null;
-        public List<object> GetTransferablePropertyValues(object? obj, bool? includeOptionalTransferables, int maxDepth = 1)
+        public List<object> GetTransferablePropertyValues(object? obj, WorkerTransferMode transferMode, int maxDepth = 1)
         {
-            var ret = GetTransferablePropertyValues(obj, includeOptionalTransferables, 0, maxDepth);
+            var depth = 0;
+            if (WorkerTransferAttribute != null)
+            {
+                depth = 0;
+                maxDepth = WorkerTransferAttribute.Depth;
+                transferMode = WorkerTransferAttribute.Transfer;
+            }
+            var ret = GetTransferablePropertyValues(obj, transferMode, depth, maxDepth);
+#if DEBUG
+            Console.WriteLine($"<< GetTransferablePropertyValues {ReturnType.FullName} {transferMode} {maxDepth} ==> {ret.Count}");
+#endif
             return ret;
         }
-        List<object> GetTransferablePropertyValues(object? obj, bool? includeOptionalTransferables, int depth, int maxDepth)
+        List<object> GetTransferablePropertyValues(object? obj, WorkerTransferMode transferMode, int depth, int maxDepth)
         {
             var ret = new List<object>();
-            if (obj != null && IsTransferableOrHasTransferableDescendants)
+            if (obj != null && transferMode != WorkerTransferMode.TransferNone && (IsTransferRequiredOrHasTransferRequiredDescendants || (IsTransferableOrHasTransferableDescendants && transferMode ==  WorkerTransferMode.TransferAll)))
             {
-                if (includeOptionalTransferables == null && WorkerTransferDesired != null)
-                {
-                    includeOptionalTransferables = WorkerTransferDesired;
-                }
                 if (IsTransferable)
                 {
-                    if (includeOptionalTransferables == true || IsTransferRequired)
+                    if (transferMode == WorkerTransferMode.TransferAll || IsTransferRequired)
                     {
                         ret.Add(obj);
                     }
                 }
-                else if (depth <= maxDepth)
+                else if (depth < maxDepth)
                 {
-                    if (usePropertyReader)
+                    depth++;
+                    var depthleft = Math.Max(maxDepth - depth, 0);
+                    if (usePropertyReader || useJSObjectReader)
                     {
                         foreach (var kvp in returnTypeProperties)
                         {
@@ -226,39 +243,23 @@ namespace SpawnDev.BlazorJS.WebWorkers
                             }
                             if (!prop.PropertyType.IsClass) continue;
                             if (typeof(IJSInProcessObjectReference) == prop.PropertyType) continue;
-                            var transferAttr = (WorkerTransferAttribute?)prop.GetCustomAttribute(typeof(WorkerTransferAttribute), false);
-                            if (transferAttr != null && !transferAttr.Transfer)
+                            var transferAttr = prop.GetCustomAttribute<WorkerTransferAttribute>(false);
+                            var propertyTransfer = transferAttr?.Transfer;
+                            if (propertyTransfer == WorkerTransferMode.TransferNone)
                             {
                                 // this property has been marked as non-transferable
                                 continue;
                             }
-                            object? propVal = null;
-                            try
-                            {
-                                propVal = prop.GetValue(obj);
-                            }
-                            catch { }
-                            if (propVal == null) continue;
+                            var propMaxDepth = transferAttr == null ? depthleft : transferAttr.Depth;
                             var conversionInfo = GetTypeConversionInfo(prop.PropertyType);
-                            var propertyTransferables = conversionInfo.GetTransferablePropertyValues(propVal, includeOptionalTransferables, depth + 1, maxDepth);
-                            ret.AddRange(propertyTransferables);
-                        }
-                    }
-                    else if (useJSObjectReader)
-                    {
-                        foreach (var kvp in returnTypeProperties)
-                        {
-                            var prop = kvp.Value;
-                            if (prop.PropertyType.IsValueType || prop.PropertyType == typeof(string))
+                            if (conversionInfo.WorkerTransferAttribute?.Transfer == WorkerTransferMode.TransferNone)
                             {
+                                // this class has been marked as non-transferable
                                 continue;
                             }
-                            if (!prop.PropertyType.IsClass) continue;
-                            if (typeof(IJSInProcessObjectReference) == prop.PropertyType) continue;
-                            var transferAttr = (WorkerTransferAttribute?)prop.GetCustomAttribute(typeof(WorkerTransferAttribute), false);
-                            if (transferAttr != null && !transferAttr.Transfer)
+                            var shouldProcessProperty = conversionInfo.IsTransferRequiredOrHasTransferRequiredDescendants || (conversionInfo.IsTransferableOrHasTransferableDescendants && transferMode == WorkerTransferMode.TransferAll);
+                            if (!shouldProcessProperty)
                             {
-                                // this property has been marked as non-transferable
                                 continue;
                             }
                             object? propVal = null;
@@ -271,8 +272,47 @@ namespace SpawnDev.BlazorJS.WebWorkers
                                 continue;
                             }
                             if (propVal == null) continue;
+                            var propertyTransferables = conversionInfo.GetTransferablePropertyValues(propVal, propertyTransfer ?? transferMode, propMaxDepth);
+                            ret.AddRange(propertyTransferables);
+                        }
+                    }
+                    else if (useJSObjectReader)
+                    {
+                        // will be removed
+                        foreach (var kvp in returnTypeProperties)
+                        {
+                            var prop = kvp.Value;
+                            if (prop.PropertyType.IsValueType || prop.PropertyType == typeof(string))
+                            {
+                                continue;
+                            }
+                            if (!prop.PropertyType.IsClass) continue;
+                            if (typeof(IJSInProcessObjectReference) == prop.PropertyType) continue;
+                            var transferAttr = prop.GetCustomAttribute<WorkerTransferAttribute>(false);
+                            var propertyTransfer = transferAttr?.Transfer;
+                            if (propertyTransfer == WorkerTransferMode.TransferNone)
+                            {
+                                // this property has been marked as non-transferable
+                                continue;
+                            }
+                            var propMaxDepth = transferAttr == null ? depthleft : transferAttr.Depth;
                             var conversionInfo = GetTypeConversionInfo(prop.PropertyType);
-                            var propertyTransferables = conversionInfo.GetTransferablePropertyValues(propVal, includeOptionalTransferables, depth + 1, maxDepth);
+                            var shouldProcessProperty = conversionInfo.IsTransferRequiredOrHasTransferRequiredDescendants || (conversionInfo.IsTransferableOrHasTransferableDescendants && transferMode == WorkerTransferMode.TransferAll);
+                            if (!shouldProcessProperty)
+                            {
+                                continue;
+                            }
+                            object? propVal = null;
+                            try
+                            {
+                                propVal = prop.GetValue(obj);
+                            }
+                            catch
+                            {
+                                continue;
+                            }
+                            if (propVal == null) continue;
+                            var propertyTransferables = conversionInfo.GetTransferablePropertyValues(propVal, propertyTransfer ?? transferMode, propMaxDepth);
                             ret.AddRange(propertyTransferables);
                         }
                     }
@@ -282,7 +322,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         foreach (var ival in enumarable)
                         {
                             if (ival == null) continue;
-                            var propertyTransferables = conversionInfo.GetTransferablePropertyValues(ival, includeOptionalTransferables, depth + 1, maxDepth);
+                            var propertyTransferables = conversionInfo.GetTransferablePropertyValues(ival, transferMode, depthleft);
                             ret.AddRange(propertyTransferables);
                         }
                     }
@@ -299,12 +339,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
                                     var value = dict[key];
                                     if (key != null)
                                     {
-                                        var propertyTransferables = keyTypeConversionInfo.GetTransferablePropertyValues(key, includeOptionalTransferables, depth + 1, maxDepth);
+                                        var propertyTransferables = keyTypeConversionInfo.GetTransferablePropertyValues(key, transferMode, depthleft);
                                         ret.AddRange(propertyTransferables);
                                     }
                                     if (value != null)
                                     {
-                                        var propertyTransferables = valueTypeConversionInfo.GetTransferablePropertyValues(value, includeOptionalTransferables, depth + 1, maxDepth);
+                                        var propertyTransferables = valueTypeConversionInfo.GetTransferablePropertyValues(value, transferMode, depthleft);
                                         ret.AddRange(propertyTransferables);
                                     }
                                 }

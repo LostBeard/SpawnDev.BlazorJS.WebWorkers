@@ -11,9 +11,23 @@
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="SpawnDev.BlazorJS.WebWorkers.Demo.styles.css" rel="stylesheet" />
     <script>
-        if (typeof SharedArrayBuffer === 'undefined') {
+        if (false && typeof SharedArrayBuffer === 'undefined') {
             const memory = new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true });
             globalThis.SharedArrayBuffer = memory.buffer.constructor;
+        }
+    </script>
+
+    <script webworker-enabled>
+        // postMessage hook used to view the data being sent through postMessage in a DedicatedWorkerGlobalScope
+        // Can be used to see what data is being transferred (2nd parameter to postMessage)
+        var hookPostMessage = true;
+        var isWorker = globalThis.constructor.name == 'DedicatedWorkerGlobalScope';
+        if (hookPostMessage && isWorker) {
+            var postMessageOrig = globalThis.postMessage;
+            globalThis.postMessage = function (...args) {
+                console.log('window.postMessage', args);
+                postMessageOrig(...args);
+            };
         }
     </script>
 </head>
