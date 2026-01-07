@@ -6,7 +6,6 @@ using SpawnDev.BlazorJS.WebWorkers;
 using SpawnDev.BlazorJS.WebWorkers.Demo;
 using SpawnDev.BlazorJS.WebWorkers.Demo.Services;
 using System.Diagnostics;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
