@@ -510,7 +510,10 @@ webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
 
 ## Transferable Objects
 When using WebWorkers, data is passed between the main thread and the worker thread using the Javascript `postMessage()` method. By default, data passed to `postMessage()` is copied, which can be slow for large data sets.
-Some transferable objects can be transferred instead of copied for better performance. When an object is transferred, the ownership of the object is moved to the receiving thread, and the sending thread can no longer access it.
+Some transferable objects can be transferred instead of copied for better performance. When an object is transferred, the ownership of the object is moved to the receiving thread, and the sending thread can no longer access it.  
+
+- See MDN documentation on [Transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for more information.
+- Transferable objects demo project: [WorkerTransferExample](https://github.com/LostBeard/WorkerTransferExample)
 
 ### WorkerTransferAttribute
 - The WorkerTransfer attribute can be applied to method parameters and return values to modify the default transfer list behavior.
@@ -523,11 +526,7 @@ Some transferable objects can be transferred instead of copied for better perfor
 - `TransferAll` - All objects that are transferable will be added to the transfer list, even if they do not require transfer.
 - `TransferNone` - No objects will be added to the transfer list, even if they are transferable.
 
-SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. 
-The WorkerTransfer attribute is used to modify the , or parameter value (or its transferable properties) to be added to the transfer list.
-- Transferable objects demo project: [WorkerTransferExample](https://github.com/LostBeard/WorkerTransferExample)
-
-Example of using WorkerTransferAttribute on a method parameter and return value to transfer an ArrayBuffer to the worker and transfer an ImageBitmap back to the caller.
+Example using WorkerTransferAttribute on a method parameter and return value to transfer an ArrayBuffer to the worker and transfer an ImageBitmap back to the caller.
 ```cs
 [return: WorkerTransfer]
 public async Task<ImageBitmap> ProcessFrame([WorkerTransfer] ArrayBuffer frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
