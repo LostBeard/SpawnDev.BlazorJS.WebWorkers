@@ -513,7 +513,7 @@ When using WebWorkers, data is passed between the main thread and the worker thr
 Some transferable objects can be transferred instead of copied for better performance. When an object is transferred, the ownership of the object is moved to the receiving thread, and the sending thread can no longer access it.
 
 ### WorkerTransferAttribute
-- The WorkerTransfer attribute can be applied to method parameters and return values to indicate that they should be transferred instead of copied when passed to or from a WebWorker.
+- The WorkerTransfer attribute can be applied to method parameters and return values to modify the default transfer list behavior.
 - When not found on a parameter or return value, the default behavior is to use `[WorkerTransferAttribute(WorkerTransferMode.TransferRequired, Depth = 3)]` which indicates that only Transferable objects that require transfer should be added to the transfer list. The Depth property indicates how deep into nested objects the transfer check should be performed.
 
 ### WorkerTransferMode enum
