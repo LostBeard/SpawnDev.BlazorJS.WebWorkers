@@ -556,11 +556,11 @@ public async Task WorkerOffscreenCanvasWorkerTransferListTest()
 
     using var offscreenCanvasReturned = await WebWorkerService.TaskPool.Run(() => WorkerOffscreenCanvasWorkerTransferListTestMethod(offscreenCanvas, new[] { offscreenCanvas }));
 
-    // offscreenCanvas will be detached if transferred (required)
+    // offscreenCanvas will be detached if transferred (required or an exception is thrown)
     var detached = offscreenCanvas.Width == 0 || offscreenCanvas.Height == 0;
     if (!detached) throw new Exception("OffscreenCanvas not detached");
 
-    // pull back into .Net so it more fairly compares to the byte[] method
+    // check size to verify the correct data was returned
     var sizeMatch = offscreenCanvasReturned.Width == 64 && offscreenCanvasReturned.Height == 64;
     if (!sizeMatch) throw new Exception("Data mismatch after transfer");
 }
