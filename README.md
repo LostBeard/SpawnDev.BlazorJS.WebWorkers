@@ -509,11 +509,23 @@ webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
 ```
 
 ## Transferable Objects
+When using WebWorkers, data is passed between the main thread and the worker thread using the Javascript `postMessage()` method. By default, data passed to `postMessage()` is copied, which can be slow for large data sets.
+Some transferable objects can be transferred instead of copied for better performance. When an object is transferred, the ownership of the object is moved to the receiving thread, and the sending thread can no longer access it.
 
-SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. Setting WorkerTransfer to true will cause the property, return value, or parameter value (or its transferable properties) to be added to the transfer list.
+### WorkerTransferAttribute
+- The WorkerTransfer attribute can be applied to method parameters and return values to indicate that they should be transferred instead of copied when passed to or from a WebWorker.
+- When not found on a parameter or return value, the default behavior is to use `[WorkerTransferAttribute(WorkerTransferMode.TransferRequired, Depth = 3)]` which indicates that only Transferable objects that require transfer should be added to the transfer list. The Depth property indicates how deep into nested objects the transfer check should be performed.
+
+### WorkerTransferMode enum
+- `TransferRequired` - Only objects that are transferable and require transfer will be added to the transfer list. Ex. OffscreenCanvas.
+- `TransferAll` - All objects that are transferable will be added to the transfer list, even if they do not require transfer.
+- `TransferNone` - No objects will be added to the transfer list, even if they are transferable.
+
+SpawnDev WebWorkers can use [transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) for better performance using the `WorkerTransferAttribute`. 
+The WorkerTransfer attribute is used to modify the , or parameter value (or its transferable properties) to be added to the transfer list.
 - Transferable objects demo project: [WorkerTransferExample](https://github.com/LostBeard/WorkerTransferExample)
 
-Example
+Example of using WorkerTransferAttribute on a method parameter and return value to transfer an ArrayBuffer to the worker and transfer an ImageBitmap back to the caller.
 ```cs
 [return: WorkerTransfer]
 public async Task<ImageBitmap> ProcessFrame([WorkerTransfer] ArrayBuffer frameBuffer, int width, int height, int _canny0, int _canny1, double _needlePatternSize)
@@ -526,10 +538,39 @@ public async Task<ImageBitmap> ProcessFrame([WorkerTransfer] ArrayBuffer frameBu
 ```
 
 In the above example, the WorkerTransfer attribute on the `frameBuffer` parameter causes the `ArrayBuffer` to be transfered to the worker and
-the WorkerTransfer attribute on the return type will cause the `ImageData` return data to be transferred in the return `postMessage()`.
+the WorkerTransfer attribute on the return type will cause the `ImageBitmap` return data to be transferred in the return `postMessage()`.
 
-***Note***  
-Some transferable objects, like OffscreenCanvas, must be added to the transferables list or the call will fail due to Javascript requirements. WebWorkers will automatically add parameters of type `OffscreenCanvas` to the transferables list without requiring the WorkerTransfer attribute.
+### TransferableListAttribute
+- Use the TransferableList attribute to mark a single method parameter as an explicit transferable list, indicating what objects to transfer.
+- This attribute should only be used on a single parameter that has a type that implements `IEnumerable<object>`.
+- If TransferableList is used, the WorkerTransferAttribute should not be used on other parameters and will be ignored.
+
+```cs
+[TestMethod]
+public async Task WorkerOffscreenCanvasWorkerTransferListTest()
+{
+    using var offscreenCanvas = new OffscreenCanvas(64, 64);
+
+    using var offscreenCanvasReturned = await WebWorkerService.TaskPool.Run(() => WorkerOffscreenCanvasWorkerTransferListTestMethod(offscreenCanvas, new[] { offscreenCanvas }));
+
+    // offscreenCanvas will be detached if transferred (required)
+    var detached = offscreenCanvas.Width == 0 || offscreenCanvas.Height == 0;
+    if (!detached) throw new Exception("OffscreenCanvas not detached");
+
+    // pull back into .Net so it more fairly compares to the byte[] method
+    var sizeMatch = offscreenCanvasReturned.Width == 64 && offscreenCanvasReturned.Height == 64;
+    if (!sizeMatch) throw new Exception("Data mismatch after transfer");
+}
+
+/// <summary>
+/// The TransferableList attribute indicates that the objects that should be transferred will be explicitly set in that parameter
+/// </summary>
+private static async Task<OffscreenCanvas> WorkerOffscreenCanvasWorkerTransferListTestMethod(OffscreenCanvas offscreenCanvas, [TransferableList] object[] transferList)
+{
+    Console.WriteLine($"Processing OffscreenCanvas with explicit TransferableList {offscreenCanvas.Width}x{offscreenCanvas.Height} bytes in worker");
+    return offscreenCanvas;
+}
+```
 
 ### Transferable JSObject types. Source [MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects#supported_objects)
 - [ArrayBuffer](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
