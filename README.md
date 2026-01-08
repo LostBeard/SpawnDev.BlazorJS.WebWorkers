@@ -546,7 +546,7 @@ the WorkerTransfer attribute on the return type will cause the `ImageBitmap` ret
 - This attribute should only be used on a single parameter that has a type that implements `IEnumerable<object>`.
 - If TransferableList is used, the WorkerTransferAttribute should not be used on other parameters and will be ignored.
 - The list of objects in the parameter marked with TransferableList will be used as the transfer list for the `postMessage()` call.
-- The recieved parameter will be null in the worker thread since it is only used to indicate what objects to transfer.
+- The recieved TransferableList parameter will be null in the worker thread since it is only used to indicate what objects to transfer.
 
 ```cs
 [TestMethod]
