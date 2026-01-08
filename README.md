@@ -514,8 +514,8 @@ Some transferable objects can be transferred instead of copied for better perfor
 
 ### WorkerTransferAttribute
 - The WorkerTransfer attribute can be applied to method parameters and return values to modify the default transfer list behavior.
-- When not found on a parameter or return value, `[WorkerTransfer(WorkerTransferMode.TransferRequired, Depth = 3)]` is used which indicates that only Transferable objects that require transfer should be added to the transfer list. 
-- When `[WorkerTransfer]` is equivalent to `[WorkerTransferAttribute(WorkerTransferMode.TransferAll, Depth = 3)]` which indicates that all Transferable objects that require transfer should be added to the transfer list. 
+- When omitted, `[WorkerTransfer(WorkerTransferMode.TransferRequired, Depth = 3)]` is used which indicates that only Transferable objects that require transfer should be added to the transfer list. 
+- `[WorkerTransfer]` is equivalent to `[WorkerTransferAttribute(WorkerTransferMode.TransferAll, Depth = 3)]` which indicates that all Transferable objects that require transfer should be added to the transfer list. 
 - The Depth property indicates how deep into objects the transfer check should be performed. The default is 3.
 
 ### WorkerTransferMode enum
