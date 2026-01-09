@@ -16,16 +16,20 @@
 - Run Blazor WASM in a ServiceWorker
 
 [Live Demo](https://blazorjs.spawndev.com/)  
+[Live Demo Repo](https://github.com/LostBeard/SpawnDev.BlazorJS.Test)
 
 ### Supported .Net Versions
-- Blazor WebAssembly .Net 6, 7, 8\*, 9\*\* and 10
-- - Tested VS Template: Blazor WebAssembly Standalone App
-- Blazor United .Net 8 (in WebAssembly project only) 
-- - Tested VS Template: Blazor Web App (Interactive WebAssembly mode without prerendering)
+- .Net 6, 7, 8, 9 and 10
+- Blazor WebAssembly Standalone App
+- Blazor Web App - Interactive WebAssembly mode without prerendering
 
-\* .Net 8 is the currently recommended .Net version due to broader compatibility and a more mature runtime and SDK.
-
-\*\* .Net 9.0.0 has an obscure bug that can appear during a `publish` build under very specific circumstances. The issue arises when using a Razor Class Library Nuget package (like WebWorkers) from another RCL and also using compression during `publish` in the Blazor app (default.) The issue was first reported on this repo as [issue #4](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/issues/4) and then reported on the [dotnet/runtime](https://github.com/dotnet/runtime/) repo as [issue #110321](https://github.com/dotnet/runtime/issues/110321). A workaround is to use `<CompressionEnabled>false</CompressionEnabled>` in your Razor Class Library, which bypasses the `publish` build error and still allows the Blazor app the ability to use compression normally if desired.
+\*\* .Net 9.0.0 has/had a bug that can appear during a `publish` build under very specific circumstances. 
+The issue arises when using a Razor Class Library Nuget package (like WebWorkers) from another RCL and also using 
+compression during `publish` in the Blazor app (default.) The issue was first reported on this repo as 
+[issue #4](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/issues/4) and then reported on the 
+[dotnet/runtime](https://github.com/dotnet/runtime/) repo as [issue #110321](https://github.com/dotnet/runtime/issues/110321). 
+A workaround is to use `<CompressionEnabled>false</CompressionEnabled>` in your Razor Class Library, which bypasses the 
+`publish` build error and still allows the Blazor app the ability to use compression normally if desired.
 
 Tested working in the following browsers (tested with .Net 8.) Chrome Android does not currently support SharedWorkers. 
 
