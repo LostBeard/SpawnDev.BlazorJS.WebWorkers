@@ -393,7 +393,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     // Send notification of completion because there is a requestId
                     var transferableList = new List<object>();
                     // only check for transferables if transferables are supported and the return value is not null
-                    if (retValue != null && _port != null)
+                    if (retValue != null && MessagePortSupportsTransferable)
                     {
                         if (retValue is byte[] bytes)
                         {
@@ -693,26 +693,25 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 Type? genericType = null;
                 if (methodParamType.IsGenericTypeDefinition) genericType = methodParamType;
                 else if (methodParamType.IsGenericType) genericType = methodParamType.GetGenericTypeDefinition();
-#if DEBUG && false
-                var genericTypeStr = genericType == null ? "NULL" : genericType.FullName;
-                JS.Log($"genericTypeStr: {genericTypeStr}");
-#endif
                 var coreType = genericType ?? methodParamType;
                 //var methodParamTypeName = methodParamInfo.ParameterType.Name;
                 var genericTypes = methodParamType.GenericTypeArguments;
                 // check if it is a [TransferableList] object[] parameter
                 if (transferableListAttributeParameter == methodParamInfo && arg is IEnumerable<object> objectArray)
                 {
-                    transferableList.AddRange(objectArray);
+                    if (MessagePortSupportsTransferable)
+                    {
+                        transferableList.AddRange(objectArray);
+                    }
                     // the parameter data is not actually passed, the parameter exists to tell the sender what data should be added to the transferables list
-                    // ret[i] = null;
+                    // ret[i] = null; (implicit)
                     continue;
                 }
                 if (IsCallSideParameter(methodParamInfo))
                 {
                     // resolved on the other side
                     // skip item ...
-                    // ret[i] = null;
+                    // ret[i] = null; (implicit)
                     continue;
                 }
                 else if (arg is Delegate argDelegate && !string.IsNullOrEmpty(requestId))
@@ -758,7 +757,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         ret[i] = null;
                     }
                 }
-                else if (arg is byte[] bytes)
+                else if (MessagePortSupportsTransferable && arg is byte[] bytes)
                 {
                     // to get better performance when sending byte arrays we convert it to a Uint8Array reference first, and add its array buffer to the transferables list.
                     // it will still be read in on the other side as a byte array. this prevents 1 copying stage.
@@ -766,7 +765,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     transferableList.Add(uint8Array.Buffer);
                     ret[i] = uint8Array;
                 }
-                else if (!transferableListAttributeFound)
+                else if (MessagePortSupportsTransferable && !transferableListAttributeFound)
                 {
                     // if a transfer list was not found...
                     // Add required transferables like OffscreenCanvas
