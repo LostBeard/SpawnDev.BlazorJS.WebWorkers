@@ -120,13 +120,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     if (useDictionaryReader) return;
                 }
             }
-            else if (typeof(IJSObjectProxy).IsAssignableFrom(returnType))
-            {
-                useJSObjectReader = false;
-                useDefaultReader = false;
-                isIJSObject = true;
-                return;
-            }
             else if (typeof(DispatchProxy).IsAssignableFrom(returnType))
             {
                 useJSObjectReader = false;
