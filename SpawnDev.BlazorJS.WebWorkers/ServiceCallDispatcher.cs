@@ -392,7 +392,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     // Send notification of completion because there is a requestId
                     var transferableList = new List<object>();
-                    if (retValue != null)
+                    // only check for transferables if transferables are supported and the return value is not null
+                    if (retValue != null && _port != null)
                     {
                         if (retValue is byte[] bytes)
                         {
@@ -682,6 +683,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             var transferableListAttributeFound = transferableListAttributeParameter != null;
             var argsLength = args == null ? 0 : args.Length;
             object?[]? ret = new object?[argsLength];
+            var postSupportsTransferables = _port != null;
             for (var i = 0; i < argsLength; i++)
             {
                 var arg = args![i];
