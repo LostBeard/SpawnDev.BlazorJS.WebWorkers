@@ -156,7 +156,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// <typeparam name="TService"></typeparam>
         /// <typeparam name="TImplementation"></typeparam>
         /// <returns></returns>
-        public virtual Task<bool> AddService<TService, TImplementation>() 
+        public virtual Task<bool> AddService<TService, TImplementation>()
         {
             return AddService(typeof(TService), typeof(TImplementation));
         }

@@ -821,7 +821,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public async Task<WebWorker?> GetWebWorker(WebWorkerOptions webWorkerOptions)
         {
             var webWorker = GetWebWorkerSync(webWorkerOptions);
-            if (webWorker == null) return null; 
+            if (webWorker == null) return null;
             await webWorker.WhenReady;
             return webWorker;
         }

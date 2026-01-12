@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace SpawnDev.BlazorJS.WebWorkers
+﻿namespace SpawnDev.BlazorJS.WebWorkers
 {
     /// <summary>
     /// A simple serializer for exceptions that can be used to pass exceptions between window, service worker, dedicated worker, and shared worker contexts.<br/>

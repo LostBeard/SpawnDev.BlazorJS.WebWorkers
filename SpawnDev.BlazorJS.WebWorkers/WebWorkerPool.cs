@@ -343,7 +343,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 worker = await job.Task.WaitAsync(cancellationToken);
             }
-            catch(TaskCanceledException canceledException)
+            catch (TaskCanceledException canceledException)
             {
                 job.TrySetException(canceledException);
                 //// the worker will be released immediately as the caller has cancelled and no longer wants it
@@ -366,7 +366,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         async Task AddWorker()
         {
             if (IsDisposed || _workers.Count >= _PoolSize) return;
-            var worker = WebWorkerService.GetWebWorkerSync(new Dictionary<string, string> { { "taskPool", "1"} });
+            var worker = WebWorkerService.GetWebWorkerSync(new Dictionary<string, string> { { "taskPool", "1" } });
             if (worker == null) return;
             _workers.Add(worker);
             await worker.WhenReady;

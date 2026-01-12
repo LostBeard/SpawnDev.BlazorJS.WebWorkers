@@ -30,7 +30,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public bool IsTransferRequired => TransferableAttribute?.TransferRequired == true;
         public TransferableAttribute? TransferableAttribute { get; private set; }
         public WorkerTransferAttribute? WorkerTransferAttribute { get; private set; }
-        static List<Type> IgnoreInterfaces = new List<Type> 
+        static List<Type> IgnoreInterfaces = new List<Type>
         {
             typeof(IJSInProcessObjectReference),
             typeof(IJSObjectReference),
@@ -218,7 +218,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         List<object> GetTransferablePropertyValues(object? obj, WorkerTransferMode transferMode, int depth, int maxDepth)
         {
             var ret = new List<object>();
-            if (obj != null && transferMode != WorkerTransferMode.TransferNone && (IsTransferRequiredOrHasTransferRequiredDescendants || (IsTransferableOrHasTransferableDescendants && transferMode ==  WorkerTransferMode.TransferAll)))
+            if (obj != null && transferMode != WorkerTransferMode.TransferNone && (IsTransferRequiredOrHasTransferRequiredDescendants || (IsTransferableOrHasTransferableDescendants && transferMode == WorkerTransferMode.TransferAll)))
             {
                 if (IsTransferable)
                 {
@@ -374,7 +374,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 {
                     var cis = new Dictionary<Type, TypeConversionInfo?>();
                     var subTypes = conversionInfo.SubTypes.ToList();
-                    foreach(var subType in subTypes)
+                    foreach (var subType in subTypes)
                     {
                         cis[subType] = null;
                     }
@@ -384,7 +384,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         var nType = nextType.Key;
                         var nValue = nType == type ? conversionInfo : GetTypeConversionInfo(nType);
                         cis[nType] = nValue;
-                        foreach(var subType in nValue.SubTypes)
+                        foreach (var subType in nValue.SubTypes)
                         {
                             if (!cis.ContainsKey(subType))
                             {
