@@ -1,28 +1,6 @@
 ﻿namespace SpawnDev.BlazorJS.WebWorkers
 {
     /// <summary>
-    /// Specifies the modes for transferring worker-related data, indicating whether required, all, or no transferable
-    /// values should be included in the operation.
-    /// </summary>
-    /// <remarks>Use this enumeration to control the scope of data transfer when performing worker-related
-    /// operations. Selecting the appropriate mode can help optimize performance and ensure that only necessary data is
-    /// transferred.</remarks>
-    public enum WorkerTransferMode
-    {
-        /// <summary>
-        /// Transfer required transferable values only.<br/>
-        /// </summary>
-        TransferRequired,
-        /// <summary>
-        /// Transfer all transferable values, both required and optional.<br/>
-        /// </summary>
-        TransferAll,
-        /// <summary>
-        /// Indicates that no data transfer operation is desired.
-        /// </summary>
-        TransferNone
-    }
-    /// <summary>
     /// The WorkerTransferAttribute is used to mark values that should be added to the transferables list when sent to another context.<br/>
     /// Ommitting this attribute will result in the default behavior, which is to transfer only required transferable values.<br/>
     /// </summary>
@@ -43,7 +21,7 @@
         /// <summary>
         /// New instance
         /// </summary>
-        /// <param name="transfer"></param>
+        /// <param name="transfer">transfer ? TransferAll : TransferNone</param>
         public WorkerTransferAttribute(bool transfer)
         {
             Transfer = transfer ? WorkerTransferMode.TransferAll : WorkerTransferMode.TransferNone;
@@ -71,15 +49,16 @@
         /// <summary>
         /// New instance
         /// </summary>
-        /// <param name="transfer"></param>
-        /// <param name="depth"></param>
+        /// <param name="transfer">Worekr transfer mode</param>
+        /// <param name="depth">Max property depth</param>
         public WorkerTransferAttribute(WorkerTransferMode transfer, int depth)
         {
             Transfer = transfer;
             Depth = depth;
         }
         /// <summary>
-        /// Default transfer mode when not specified
+        /// Default transfer mode when not specified.<br/>
+        /// WorkerTransferMode.TransferRequired, Depth = 3
         /// </summary>
         public static WorkerTransferAttribute TransferRequiredDefault { get; } = new WorkerTransferAttribute(WorkerTransferMode.TransferRequired, 3);
     }
