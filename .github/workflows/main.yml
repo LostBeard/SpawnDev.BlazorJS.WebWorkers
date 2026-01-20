@@ -17,7 +17,7 @@ jobs:
     - name: Setup .NET Core SDK
       uses: actions/setup-dotnet@v3.0.3
       with:
-        dotnet-version: 8.0.400-preview.0.24324.5
+        dotnet-version: 10
 
     # Install dotnet wasm buildtools workload
     - name: Install .NET WASM Build Tools
