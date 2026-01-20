@@ -7,6 +7,8 @@
 // Update 2024-07-15: this script will now be copied to the app wwwroot path instead of the rcl _content path (wwwroot/_content/SpawnDev.BlazorJS.WebWorkers/spawndev.blazorjs.webworkers.js)
 // this script loads a fake window and document environment
 // to enable loading the Blazor WASM app in a DedicatedWorkerGlobalScope, SharedWorkerGlobalScope or ServiceWorkerGlobalScope
+// This script is loaded when using 'classic' mode DedicatedWorker, SharedWorker, or ServiceWorker.
+// When using 'module' mode, the spawndev.blazorjs.webworkers.module.js script is loaded instead.
 
 var globalThisTypeName = self.constructor.name;
 var disableHotReload = true;
@@ -25,7 +27,7 @@ var queryParams = new Proxy({}, {
 
 // a query param can be used to set the index.html file url
 var indexHtml = queryParams.indexHtml ?? './';
-if (typeof indexHtml === 'string' && ['true','1'].indexOf(indexHtml.toLowerCase()) !== -1) indexHtml = 'index.html';
+if (typeof indexHtml === 'string' && ['true', '1'].indexOf(indexHtml.toLowerCase()) !== -1) indexHtml = 'index.html';
 // below switches the indexHtml path to index.html if running in a browser extension
 var browserExtension = (self.browser && self.browser.runtime && self.browser.runtime.id) || (self.chrome && self.chrome.runtime && self.chrome.runtime.id) || location.href.indexOf('chrome-extension') === 0;
 if (browserExtension) indexHtml = 'index.html';
@@ -43,73 +45,14 @@ var consoleLog = function () {
 consoleLog('spawndev.blazorjs.webworkers: started');
 consoleLog('location.href', location.href);
 
-// in some contexts, event handlers need to be added immediately and cannot wait for Blazor WASM's async startup
-// for example:
-// in a shared worker, the onconnect event handler needs to be set immediately to catch all invocations of the event
-// at this time, I ma not sure about fetch on service worker contexts. some debug code is being left until known.
-if (globalThisTypeName == 'SharedWorkerGlobalScope') {
-    // important for SharedWorker
-    // catch any incoming connetions that happen while .Net is loading
-    let _missedConnections = [];
-    self.takeOverOnConnectEvent = function (newConnectFunction) {
-        var tmp = _missedConnections;
-        _missedConnections = [];
-        self.onconnect = newConnectFunction;
-        return tmp;
+if (importServiceWorkerAssets) {
+    if (importServiceWorkerAssets.indexOf('.js') !== -1) {
+        consoleLog('importing asset manifest', importServiceWorkerAssets);
+        importScripts(importServiceWorkerAssets);
+    } else {
+        consoleLog('importing asset manifest', 'service-worker-assets.js');
+        importScripts('service-worker-assets.js');
     }
-    self.onconnect = function (e) {
-        _missedConnections.push(e.ports[0]);
-    };
-} else if (globalThisTypeName == 'ServiceWorkerGlobalScope') {
-    if (importServiceWorkerAssets) {
-        if (importServiceWorkerAssets.indexOf('.js') !== -1) {
-            consoleLog('importing asset manifest', importServiceWorkerAssets);
-            importScripts(importServiceWorkerAssets);
-        } else {
-            consoleLog('importing asset manifest', 'service-worker-assets.js');
-            importScripts('service-worker-assets.js');
-        }
-    }
-    // Starting Blazor requries using importScripts inside async functions
-    // e.waitUntil is used during the install event to allow importScripts inside async functions
-    // it is resolved after loading is complete
-    let holdEvents = true;
-    let missedServiceWorkerEventts = [];
-    function handleMissedEvent(e) {
-        if (!holdEvents) return;
-        consoleLog('ServiceWorker missed event:', e.type, e);
-        if (e.waitUntil && e.type != 'fetch') {
-            var waitUntilPromise = new Promise(function (resolve, reject) {
-                e.waitResolve = resolve;
-                e.waitReject = reject;
-            });
-            e.waitUntil(waitUntilPromise);
-        }
-        if (e.respondWith && e.type == 'fetch') {
-            var responsePromise = new Promise(function (resolve, reject) {
-                e.responseResolve = resolve;
-                e.responseReject = reject;
-            });
-            e.respondWith(responsePromise);
-        }
-        missedServiceWorkerEventts.push(e);
-    }
-    self.addEventListener('install', handleMissedEvent);
-    self.addEventListener('activate', handleMissedEvent);
-    self.addEventListener('fetch', handleMissedEvent);
-    self.addEventListener('message', handleMissedEvent);
-    self.addEventListener('notificationclick', handleMissedEvent);
-    self.addEventListener('notificationclose', handleMissedEvent);
-    self.addEventListener('push', handleMissedEvent);
-    self.addEventListener('pushsubscriptionchange', handleMissedEvent);
-    self.addEventListener('sync', handleMissedEvent);
-    // This method will be called by Blazor WASM when it starts up to collect missed events and handle them
-    self.GetMissedServiceWorkerEvents = function () {
-        holdEvents = false;
-        var ret = missedServiceWorkerEventts;
-        missedServiceWorkerEventts = [];
-        return ret;
-    };
 }
 
 // location.href is this script
@@ -131,15 +74,21 @@ var documentBaseURI = (function () {
 consoleLog('documentBaseURI', documentBaseURI);
 
 function getAppURL(relativePath) {
-    return new URL(relativePath, documentBaseURI).toString();
-}
-function getBWWURL(relativePath) {
-    return new URL(relativePath, documentBaseURI).toString();
+    var ret = new URL(relativePath, documentBaseURI).toString();
+    if (self.indexImportMaps) {
+        for (var mapSet of self.indexImportMaps) {
+            if (mapSet.imports[ret]) {
+                return mapSet.imports[ret];
+            }
+        }
+    }
+    return ret;
 }
 consoleLog('spawndev.blazorjs.webworkers: loading fake window environment');
+// event holder for async blazor startup
+importScripts(getAppURL('spawndev.blazorjs.webworkers.event-holder.js'));
 // faux DOM and document environment
-//importScripts('spawndev.blazorjs.webworkers.faux-env.js');
-importScripts(getBWWURL('spawndev.blazorjs.webworkers.faux-env.js'));
+importScripts(getAppURL('spawndev.blazorjs.webworkers.faux-env.js'));
 // faux dom and window environment has been created (currently empty)
 // set document.baseURI to the apps basePath (which is relative to this scripts path)
 document.baseURI = documentBaseURI;
@@ -149,12 +98,13 @@ if (disableHotReload) {
 
 // dynamic import support tested using an empty script
 async function hasDynamicImport() {
-    // import() is disallowed on ServiceWorkerGlobalScope by the HTML specification.See https://github.com/w3c/ServiceWorker/issues/1356.
+    // import() is disallowed on ServiceWorkerGlobalScope by the HTML specification.
+    // See https://github.com/w3c/ServiceWorker/issues/1356.
     if (globalThisTypeName == 'ServiceWorkerGlobalScope') {
         return false;
     }
     try {
-        await import(getBWWURL('spawndev.blazorjs.webworkers.empty.js'));
+        await import(getAppURL('spawndev.blazorjs.webworkers.empty.js'));
         return true;
     } catch (e) {
         return false;
@@ -185,12 +135,14 @@ var initWebWorkerBlazor = async function () {
     }
     // TODO - detect pre-patched framework or read a config file that indicates state
     var WebWorkerEnabledAttributeName = 'webworker-enabled';
+    // set false here, but may be set to true if import maps are found in the index.html and need to be used
+    var importMapsFound = false;
     // detect if we need to use a patched framework
     var dynamicImportSupported = await hasDynamicImport();
     if (!dynamicImportSupported) {
-        consoleLog("import is not supported. The framework scripts will be fetched, patched, and then loaded. A CSP script-src rule blocking 'unsafe-eval' may prevent this");
+        consoleLog("dynamic import is not supported. The framework scripts will be fetched, patched, and then loaded. A CSP script-src rule blocking 'unsafe-eval' may prevent this");
     } else {
-        consoleLog('import is supported. The framework will be loaded as-is.');
+        consoleLog('dynamic import is supported. The framework will be loaded as-is.');
     }
     // Get index.html and parse it for scripts
     function getScriptNodes(indexHtmlSrc) {
@@ -233,11 +185,11 @@ var initWebWorkerBlazor = async function () {
         for (var scriptNode of scriptNodes) {
             let src = scriptNode.attributes.src;
             if (!src) continue;
-            if (src.includes('_framework/blazor.web.js')) {
+            if (src.includes('_framework/blazor.web.')) {
                 if (overrideUnitedRuntime) {
                     // blazor united comes with the wasm runtime also
                     // if overrideUnitedRuntime == true, we will use the wasm runtime instead of the united runtime
-                    src = src.replace('_framework/blazor.web.js', '_framework/blazor.webassembly.js');
+                    src = src.replace('_framework/blazor.web.', '_framework/blazor.webassembly.');
                     scriptNode.attributes.src = src;
                 } else {
                     // modify the united runtime as needed for compatibility with WebWorkers
@@ -261,7 +213,7 @@ var initWebWorkerBlazor = async function () {
                     var m = placeHolderPatt.exec(jsStr);
                     if (m) {
                         jsStr = jsStr.replace(placeHolderPatt, '$1setTimeout(()=>this.startWebAssemblyIfNotStarted(),0),');
-                        if (!dynamicImportSupported) {
+                        if (!dynamicImportSupported || importMapsFound) {
                             // fix dynamic imports
                             jsStr = fixModuleScript(jsStr, src);
                         }
@@ -272,17 +224,17 @@ var initWebWorkerBlazor = async function () {
                         };
                     } else {
                         console.warn(`Failed to find Blazor United runtime 'placeHolderPatt' in '${src}' for on the fly patching. Will try Blazor WASM runtime '_framework/blazor.webassembly.js' as fallback.`);
-                        src = src.replace('_framework/blazor.web.js', '_framework/blazor.webassembly.js');
+                        src = src.replace('_framework/blazor.web.', '_framework/blazor.webassembly.');
                         scriptNode.attributes.src = src;
                     }
                 }
             }
-            if (src.includes('_framework/blazor.webassembly.js')) {
+            if (src.includes('_framework/blazor.webassembly.')) {
                 // modify the wasm runtime as needed for compatibility with WebWorkers
                 if (typeof scriptNode.attributes[WebWorkerEnabledAttributeName] === 'undefined') {
                     scriptNode.attributes[WebWorkerEnabledAttributeName] = '';
                 }
-                if (!dynamicImportSupported) {
+                if (!dynamicImportSupported || importMapsFound) {
                     // load script text so we can do some on-the-fly patching to fix compatibility with WebWorkers
                     let jsStr = await getText(src);
                     if (prePatchedCheck(jsStr)) {
@@ -305,8 +257,9 @@ var initWebWorkerBlazor = async function () {
     }
     // if a strict content-security-policy prohibits 'unsafe-eval' the below method will not work... sciprts will need to be pre-processed (during publish/build step)
     // import shim used by code that is patched on the fly
-    self.importOverride = async function (src) {
-        consoleLog('importOverride', src);
+    self.importOverride = async function (callerSrc, src) {
+        consoleLog('importOverride', src, callerSrc);
+        src = new URL(src, callerSrc).toString();
         var jsStr = await getText(src);
         jsStr = fixModuleScript(jsStr, src);
         let fn = new Function(jsStr);
@@ -317,9 +270,16 @@ var initWebWorkerBlazor = async function () {
     // this method patches 'dynamic import scripts' to work in an environment that does not support 'dynamic import scripts'
     // it is designed for and tested with the Blazor WASM runtime.
     // it may not work on other modules
+    /**
+     * Patches a Blazor Javascript framework file at runtime to allow loading in a Web Worker, Shared Worker, or Service Worker.
+     * @param {string} jsStr The javascript file source code to patch
+     * @param {string} src The source URL of the javascript file
+     * @returns
+     */
     function fixModuleScript(jsStr, src) {
         // handle things that are automatically handled by import
         src = getAppURL(src);
+        //var srcFilename = new URL(src).pathname.split('/').pop();
         var scriptUrl = JSON.stringify(src);
         consoleLog('fixModuleScript.scriptUrl', src, scriptUrl);
         // fix import.meta.url - The full URL to the module
@@ -328,7 +288,7 @@ var initWebWorkerBlazor = async function () {
         // import.meta -> { url: SCRIPT_URL }
         jsStr = jsStr.replace(/\bimport\.meta\b/g, `{ url: ${scriptUrl} }`);
         // import -> importOverride ... importOverride can decide at runtime if it needs to use 'importScripts' or 'await import'
-        jsStr = jsStr.replace(/\bimport\(/g, 'importOverride(');
+        jsStr = jsStr.replace(/\bimport\(/g, `importOverride(${scriptUrl},`);
         // export
         // https://www.geeksforgeeks.org/what-is-export-default-in-javascript/
         // handle exports from
@@ -368,8 +328,40 @@ var initWebWorkerBlazor = async function () {
     }
     async function initializeBlazor() {
         // get index.html text for parsing
+        // .Net 10 adds the need to acquire the import map from the index.html
         var indexHtmlSrc = await getText(indexHtml);
         var scriptNodes = getScriptNodes(indexHtmlSrc);
+        // find any import maps
+        self.indexImportMaps = [];
+        for (var scriptNode of scriptNodes) {
+            if (scriptNode.attributes['type'] == 'importmap') {
+                try {
+                    let importMap = JSON.parse(scriptNode.text);
+                    let resolvedMaps = {};
+                    for (let k in importMap.imports) {
+                        let v = importMap.imports[k];
+                        let kUrl = new URL(k, documentBaseURI).toString();
+                        var vUrl = new URL(v, documentBaseURI).toString();
+                        resolvedMaps[kUrl] = vUrl;
+                    }
+                    Object.assign(importMap.imports, resolvedMaps);
+                    self.indexImportMaps.push(importMap);
+                    consoleLog('added importmap', importMap);
+                } catch (ex) {
+                    consoleLog('error parsing the importmap', ex);
+                }
+            }
+        }
+        importMapsFound = self.indexImportMaps && self.indexImportMaps.length;
+        if (importMapsFound) {
+            // when using importmaps,  importScripts is overriden to fix calls to aliases
+            let importScriptsOrig = self.importScripts;
+            self.importScripts = (url) => {
+                var realUrl = getAppURL(url);
+                consoleLog('importScripts', url, realUrl);
+                importScriptsOrig(realUrl);
+            }
+        }
         // detect runtime type and do runtime patching if needed
         var runtimeInfo = await detectBlazorRuntime(scriptNodes);
         consoleLog(`BlazorRuntimeType: '${runtimeInfo.runtime}' Prepatched: ${runtimeInfo.prepatched}`);

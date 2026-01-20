@@ -1,10 +1,11 @@
-'use strict';
-
 // Todd Tanner
 // 2022 - 2023
 // built as part of SpawnDev.BlazorJS.WebWorkers
 // This script creates a minimal Window scope environment to allow Blazor to boot up
-
+globalThis.verbose ??= false;
+globalThis.consoleLog ??= function () {
+    if (globalThis.verbose) console.log([...arguments])
+};
 var undefinedGets = {};
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
 function createProxiedObject(obj, useIfDefined) {
@@ -79,8 +80,7 @@ function createProxiedObject(obj, useIfDefined) {
     });
     return ret;
 }
-
-class WebStorage {
+globalThis.WebStorage ??= class {
     constructor() {
         this._store = {};
     }
@@ -97,8 +97,7 @@ class WebStorage {
         delete this._store[key];
     }
 }
-
-class EventTargetFake {
+globalThis.EventTargetFake ??= class {
     constructor() {
         this.listeners = {};
         consoleLog(this.constructor.name, 'new');
@@ -152,8 +151,7 @@ class EventTargetFake {
         return true;
     }
 }
-
-class Node extends EventTargetFake {
+globalThis.Node ??= class extends EventTargetFake {
     constructor() {
         super();
         this._nodes = [];
@@ -249,8 +247,7 @@ class Node extends EventTargetFake {
         return ret;
     }
 }
-
-class Document extends Node {
+globalThis.Document ??= class extends Node {
     constructor() {
         super();
         this._currentScript = null;
@@ -261,9 +258,10 @@ class Document extends Node {
         this._beenInit = false;
         this._importScriptsOnInit = true;
         this._readyState = '';
+        this.documentElement = new HTMLHtmlElement();
     }
     _nodeAppended(node) {
-        // if the dom hasn't been init yet do nothing here. the node will be init whe nthe doucment is
+        // if the dom hasn't been init yet do nothing here. the node will be init during doucment init
         if (this._beenInit) {
             if (node instanceof HTMLScriptElement) {
                 this.initScriptElement(node);
@@ -306,9 +304,6 @@ class Document extends Node {
         consoleLog('document readystatechanged', state);
         // if events are enabled ...
         this.dispatchEvent(new Event('readystatechange'));
-    }
-    get documentElement() {
-        return this._nodes.length == 0 ? null : this._nodes[0]
     }
     get head() {
         return this._head;
@@ -459,16 +454,13 @@ class Document extends Node {
         this.setReadyState('complete');
     }
 }
-
-// https://developer.mozilla.org/en-US/docs/Web/API/Document
-class HTMLDocument extends Document {
+globalThis.HTMLDocument ??= class extends Document {
     constructor() {
         super();
     }
 
 }
-
-class CSSStyleDeclaration {
+globalThis.CSSStyleDeclaration ??= class {
     constructor() {
         this._styles = {};
     }
@@ -481,15 +473,13 @@ class CSSStyleDeclaration {
         return this._styles[key];
     }
 }
-
-class DocumentFragment extends Node {
+globalThis.DocumentFragment ??= class extends Node {
     constructor() {
         super();
         this.nodeType = Node.DOCUMENT_FRAGMENT_NODE;
     }
 }
-
-class Element extends Node {
+globalThis.Element ??= class extends Node {
     constructor() {
         super();
         this.tagName = '';
@@ -545,13 +535,12 @@ class Element extends Node {
     }
     get attributes() { return this; };
 }
-
-class SVGElement extends Element {
+globalThis.SVGElement ??= class extends Element {
     constructor() {
         super();
     }
 }
-class HTMLElement extends Element {
+globalThis.HTMLElement ??= class extends Element {
     constructor() {
         super();
         this._style = createProxiedObject(new CSSStyleDeclaration());
@@ -560,18 +549,22 @@ class HTMLElement extends Element {
         return this._style;
     }
 }
-
-class HTMLLinkElement extends HTMLElement {
+globalThis.HTMLHtmlElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLDivElement extends HTMLElement {
+globalThis.HTMLLinkElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLTemplateElement extends HTMLElement {
+globalThis.HTMLDivElement ??= class extends HTMLElement {
+    constructor() {
+        super();
+    }
+}
+globalThis.HTMLTemplateElement ??= class extends HTMLElement {
     constructor() {
         super();
         this._content = createProxiedObject(new DocumentFragment());
@@ -580,39 +573,38 @@ class HTMLTemplateElement extends HTMLElement {
         return this._content;
     }
 }
-class HTMLTitleElement extends HTMLElement {
+globalThis.HTMLTitleElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLAnchorElement extends HTMLElement {
+globalThis.HTMLAnchorElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 
 }
-class HTMLUnknownElement extends HTMLElement {
+globalThis.HTMLUnknownElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLHtmlElement extends HTMLElement {
+globalThis.HTMLHtmlElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLHeadElement extends HTMLElement {
+globalThis.HTMLHeadElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLBodyElement extends HTMLElement {
+globalThis.HTMLBodyElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-
-class HTMLScriptElement extends HTMLElement {
+globalThis.HTMLScriptElement ??= class extends HTMLElement {
     constructor() {
         super();
         this._src = '';
@@ -631,64 +623,54 @@ class HTMLScriptElement extends HTMLElement {
         this._text = value;
     }
 }
-class HTMLButtonElement extends HTMLElement {
+globalThis.HTMLButtonElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLTextAreaElement extends HTMLElement {
+globalThis.HTMLTextAreaElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLInputElement extends HTMLElement {
+globalThis.HTMLInputElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLOptionElement extends HTMLElement {
+globalThis.HTMLOptionElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLSelectElement extends HTMLElement {
+globalThis.HTMLSelectElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLTableElement extends HTMLElement {
+globalThis.HTMLTableElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLTableSectionElement extends HTMLElement {
+globalThis.HTMLTableSectionElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLImageElement extends HTMLElement {
+globalThis.HTMLImageElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLVideoElement extends HTMLElement {
+globalThis.HTMLVideoElement ??= class extends HTMLElement {
     constructor() {
         super();
     }
 }
-class HTMLCanvasElement extends OffscreenCanvas {
-    constructor() {
-        super(1, 1);
-    }
-}
-class CanvasRenderingContext2D extends OffscreenCanvasRenderingContext2D {
-    constructor() {
-        super();
-    }
-}
-class IntersectionObserver { }
-class MutationObserver { }
-class Comment extends HTMLElement {
+globalThis.IntersectionObserver ??= class { }
+globalThis.MutationObserver ??= class { }
+globalThis.Comment ??= class extends HTMLElement {
     constructor() {
         super();
         this.nodeType = Node.COMMENT_NODE;
@@ -697,8 +679,7 @@ class Comment extends HTMLElement {
         return Symbol('comment_symbol');
     }
 }
-
-class CharacterData extends Node {
+globalThis.CharacterData ??= class extends Node {
     constructor() {
         super();
         this.data = '';
@@ -707,8 +688,7 @@ class CharacterData extends Node {
         return this.data.length;
     }
 }
-
-class Text extends CharacterData {
+globalThis.Text ??= class extends CharacterData {
     constructor(data) {
         super();
         this.nodeType = Node.TEXT_NODE;
@@ -717,8 +697,7 @@ class Text extends CharacterData {
         return Symbol('text_symbol');
     }
 }
-
-class History {
+globalThis.History ??= class {
     constructor() {
 
     }
@@ -734,22 +713,19 @@ class History {
     pushState() {
 
     }
-}
-
-class WindowFake extends EventTargetFake {
+};
+globalThis.WindowFake ??= class extends EventTargetFake {
     constructor() {
         super();
 
     }
-}
-class NavigationFake extends EventTargetFake {
+};
+globalThis.NavigationFake ??= class extends EventTargetFake {
     constructor() {
         super();
 
     }
-}
-
-
+};
 (function () {
     if (typeof self.document !== 'undefined') {
         return;
@@ -797,7 +773,6 @@ class NavigationFake extends EventTargetFake {
     var webWorkerContentDir = href.substring(0, href.lastIndexOf('/') + 1);
     document.baseURI = webWorkerContentDir;
 })();
-
 // *********** Fake Window scope environment is built ***********
 // - add needed elements like html, head, body, script
 // - adjust the document baseURI (if needed)
