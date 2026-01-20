@@ -809,7 +809,7 @@ If using them directly, IJSInProcessObjectReference objects MUST be disposed whe
 
 # Unit Testing
 This project uses Playwright .Net to enable unit testing in a real web browser with an actual Javascript environment.
-- SpawnDev.BlazorJS.WebWorkers - Demo project that contains unit test methods that can be automated or ran manually.
+- SpawnDev.BlazorJS.WebWorkers.Demo - Demo project that contains unit test methods that can be automated or ran manually.
 - PlaywrightTestRunner - The Playwright Unit Test project that runs the tests identified in the Demo project.
 - PlaywrightTestRunner/_test.sh - builds a publish version of the Demo project and runs the tests on Linux.
 - PlaywrightTestRunner/_test.bat - builds a publish version of the Demo project and runs the tests on Windows.
