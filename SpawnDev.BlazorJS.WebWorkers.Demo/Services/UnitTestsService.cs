@@ -1403,11 +1403,17 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
         }
         /// <summary>
         /// Transfer tests for MediaSourceHandle</br>
-        /// Unsupported test on Firefox (diff results than Chromium)
+        /// MediaSourceHandle is currently unsupported in Firefox<br/>
+        /// https://developer.mozilla.org/en-US/docs/Web/API/MediaSourceHandle#browser_compatibility
         /// </summary>
         [TestMethod]
         public async Task TransferTestMediaSourceHandle()
         {
+            // As of 2026-01-20 In a dedicated worker in Firefox, MediaSource is undefined
+            // and in Window context returns MediaSource.CanConstructInDedicatedWorker == false
+            // https://developer.mozilla.org/en-US/docs/Web/API/MediaSource#browser_compatibility
+            if (!MediaSource.CanConstructInDedicatedWorker) throw new UnsupportedTestException("MediaSource not supported in worker");
+
             var transferableAttr = TransferableAttribute.GetTransferable<MediaSourceHandle>();
             // gets the TransferableAttribute (if one)
             var isTransferable = transferableAttr != null;
@@ -1420,7 +1426,6 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
             {
                 var mediaSourceHandle = await WebWorkerService.TaskPool.Run(() => CreateMediaSourceHandle(default!));
 
-                // As of 2026-01-20 In a dedicated worker in Firefox, MediaSource is undefined
                 if (mediaSourceHandle == null) throw new UnsupportedTestException("MediaSource not supported in worker");
 
                 var structuredCloneRequiresTransfer = StructuredIsTransferRequiredCheck(mediaSourceHandle);
