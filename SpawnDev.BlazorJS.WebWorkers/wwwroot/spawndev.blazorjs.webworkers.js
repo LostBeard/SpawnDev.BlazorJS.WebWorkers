@@ -328,7 +328,7 @@ var initWebWorkerBlazor = async function () {
     }
     async function initializeBlazor() {
         // get index.html text for parsing
-        // .Net 10 adds the need to acquire the import map from the index.html
+        // .Net 10 adds the need to support importmap script types from the index.html
         var indexHtmlSrc = await getText(indexHtml);
         var scriptNodes = getScriptNodes(indexHtmlSrc);
         // find any import maps

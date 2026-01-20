@@ -422,7 +422,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         }
                     }
                     var callbackMsg = new object?[] { "callback", requestId, err, retValue };
-#if DEBUG
+#if DEBUG && false
                     JS.Log("worker.postMessage", new object[] { callbackMsg, transferableList.ToArray() });
 #endif
                     if (_port != null) _port.PostMessage(callbackMsg, transferableList.ToArray());
