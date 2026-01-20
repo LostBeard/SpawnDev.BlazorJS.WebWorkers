@@ -807,6 +807,14 @@ Callback types must be disposed unless created with the Callback.CreateOne metho
 
 If using them directly, IJSInProcessObjectReference objects MUST be disposed when no longer needed. Failing to dispose them will cause memory leaks.
 
+# Unit Testing
+This project uses Playwright .Net to enable unit testing in a real web browser with an actual Javascript environment.
+- SpawnDev.BlazorJS.WebWorkers - Demo project that contains unit test methods that can be automated or ran manually.
+- PlaywrightTestRunner - The Playwright Unit Test project that runs the tests identified in the Demo project.
+- PlaywrightTestRunner/_test.sh - builds a publish version of the Demo project and runs the tests on Linux.
+- PlaywrightTestRunner/_test.bat - builds a publish version of the Demo project and runs the tests on Windows.
+- .github/workflows/playwright-test-runner.yml - builds a publish version of the Demo project and runs the tests on GitHub.
+
 # Support for You
 Issues can be reported [here](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/issues) on GitHub. Create a new [discussion](https://github.com/LostBeard/SpawnDev.BlazorJS.WebWorkers/discussions) to show off your projects and post your ideas. 
 
