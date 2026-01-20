@@ -1,0 +1,54 @@
+﻿@using SpawnDev.Blazor.UnitTesting;
+@using System.Reflection;
+@using System.Runtime.InteropServices
+@using SpawnDev.BlazorJS.IJSInProcessObjectReferenceAnyKey
+@using System.Security.Cryptography
+@using System.Text.Json
+@using System.Text
+@using SpawnDev.BlazorJS.JSObjects
+@using SpawnDev.BlazorJS.JSObjects.WebRTC
+
+@page "/tests"
+
+<PageTitle>Unit Tests</PageTitle>
+
+<h3>Unit Tests</h3>
+<p>Secure Context: @SecureContext</p>
+<p>@UserAgent</p>
+<p>
+    This page runs tests to verify the library is working as expected.<br />
+    NUnit will run these tests during testing with Playwright.
+</p>
+
+<UnitTestsView TypeInstanceResolver="TestTypeResolver" TestAssemblies="Assemblies" TestTypes="Types"></UnitTestsView>
+
+@code {
+    [Inject]
+    IServiceCollection ServiceDescriptors { get; set; } = default!;
+    [Inject]
+    BlazorJSRuntime JS { get; set; } = default!;
+    List<Assembly>? Assemblies = new List<Assembly>();
+    List<Type>? Types = new List<Type>();
+    string UserAgent = "";
+    bool SecureContext = false;
+    object? TestTypeResolver(Type testType)
+    {
+        if (testType == this.GetType()) return this;
+        return null;
+    }
+    protected override void OnInitialized()
+    {
+        UserAgent = JS.Get<string?>("navigator.userAgent") ?? "[UNKNOWN]";
+        var originIsolated = JS.Get<bool?>("crossOriginIsolated");
+        SecureContext = originIsolated != false && SharedArrayBuffer.Supported;
+        Types = new List<Type> { this.GetType() };
+        // add tests in the assembly this is in
+        Assemblies = new List<Assembly> { this.GetType().Assembly };
+        // add all services. only services with tests will be used.
+        // not necessary if the service types are in an assembly that is in the Assemblies list
+        foreach (var descriptor in ServiceDescriptors)
+        {
+            Types.Add(descriptor.ServiceType);
+        }
+    }
+}

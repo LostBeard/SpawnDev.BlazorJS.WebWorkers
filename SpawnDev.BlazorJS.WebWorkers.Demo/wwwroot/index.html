@@ -20,7 +20,7 @@
     <script webworker-enabled>
         // postMessage hook used to view the data being sent through postMessage in a DedicatedWorkerGlobalScope
         // Can be used to see what data is being transferred (2nd parameter to postMessage)
-        var hookPostMessage = true;
+        var hookPostMessage = false;
         var isWorker = globalThis.constructor.name == 'DedicatedWorkerGlobalScope';
         if (hookPostMessage && isWorker) {
             var postMessageOrig = globalThis.postMessage;

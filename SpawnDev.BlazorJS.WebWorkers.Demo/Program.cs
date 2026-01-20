@@ -25,6 +25,16 @@ builder.Services.RegisterServiceWorker<AppServiceWorker>(new ServiceWorkerConfig
 
 builder.Services.AddSingleton<TestClass2>();
 
+builder.Services.AddSingleton(builder.Configuration); // used to demo appsettings reading in workers
+builder.Services.AddSingleton<IMathsService, MathsService>();
+
+builder.Services.AddKeyedSingleton<ITestService2>("apples", (_, key) => new TestService2((string)key!));
+builder.Services.AddKeyedSingleton<ITestService2>("bananas", (_, key) => new TestService2((string)key!));
+
+builder.Services.AddSingleton<AsyncCallDispatcherTest>();
+// This service currently holds all of the unit tests
+builder.Services.AddSingleton<UnitTestsService>();
+
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 if (JS.IsWindow)
