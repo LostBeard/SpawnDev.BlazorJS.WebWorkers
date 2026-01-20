@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using SpawnDev.BlazorJS.WebWorkers;
 using System.Diagnostics;
 
 namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
