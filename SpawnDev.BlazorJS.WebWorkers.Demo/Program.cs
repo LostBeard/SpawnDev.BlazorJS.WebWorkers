@@ -25,7 +25,7 @@ builder.Services.AddKeyedSingleton<ITestService2>("bananas", (_, key) => new Tes
 builder.Services.AddSingleton<AsyncCallDispatcherTest>();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-// This service holds unit tests
+// add service(s) that holds unit tests
 builder.Services.AddSingleton<UnitTestsService>();
 
 // add root elements if running in the window
