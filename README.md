@@ -493,23 +493,36 @@ Therefore, console logs from SharedWebWorkers will not appear in the web page's 
 To view the output from a SharedWebWorker in Chrome, you can view the chrome page at `chrome://inspect/#workers` and find the SharedWebWorker instance to see its console output.
 
 ## Send events
+You can send and receive events between connected workers using the OnMessage event and SendEvent() method.
+
 ```cs
-// Optionally listen for event messages
-worker.OnMessage += (sender, msg) =>
+PiProgress? piProgress = null;
+
+// Optionally listen for event messages from the worker
+worker.OnMessage += (ServiceCallDispatcher sender, string eventName, Array data) =>
 {
-    if (msg.TargetName == "progress")
+    // sender is the ServiceCallDispatcher used to communicate with the worker that sent the event
+    if (eventName == "progress")
     {
-        PiProgress msgData = msg.GetData<PiProgress>();
+        // Get the event data from the data Array (if any)
+        // Here we are expecting a PiProgress object
+        PiProgress msgData = data.Shift<PiProgress>();
         piProgress = msgData.Progress;
         StateHasChanged();
     }
 };
+```
 
-// From SharedWebWorker or WebWorker threads, send an event to connected parent(s)
-workerService.SendEventToParents("progress", new PiProgress { Progress = piProgress });
-
-// Or send an event to a connected worker
+### Send event from Worker owner to worker
+Worker owners (Window or SharedWorker) can send events to their connected worker using the `WebWorker.SendEvent(string eventName, object?[]? data = null)` method.
+```cs
 webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
+```
+
+### Send event from SharedWebWorker or WebWorker to connected parent(s)
+SharedWebWorker and WebWorker instances can send events to their connected parent(s) using the `WebWorkerService.SendEventToParents(string eventName, object?[]? data = null)` method.
+```cs
+webWorkerService.SendEventToParents("progress", new PiProgress { Progress = piProgress });
 ```
 
 ## Transferable Objects

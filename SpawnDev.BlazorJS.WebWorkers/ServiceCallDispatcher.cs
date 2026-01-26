@@ -21,12 +21,17 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public static bool FullExceptionString { get; set; } = true;
         class CallSideParameter
         {
-            public string Name { get; }
+            public string Name { get; } = "";
             public Type Type { get; }
             public Func<object?> GetValue;
             public CallSideParameter(string name, Func<object?> getter, Type type)
             {
                 Name = name;
+                GetValue = getter;
+                Type = type;
+            }
+            public CallSideParameter(Func<object?> getter, Type type)
+            {
                 GetValue = getter;
                 Type = type;
             }
@@ -122,7 +127,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             _portSimple = port;
             _portSimple.OnMessage += _worker_OnMessage;
             _portSimple.OnMessageError += _port_OnError;
-            additionalCallArgs.Add(new CallSideParameter("caller", () => this, typeof(ServiceCallDispatcher)));
+            additionalCallArgs.Add(new CallSideParameter(() => this, typeof(ServiceCallDispatcher)));
             LocalInfo = new ServiceCallDispatcherInfo { InstanceId = JS.InstanceId, GlobalThisTypeName = JS.GlobalThisTypeName };
         }
         IBackgroundServiceManager WebAssemblyServices;
@@ -136,7 +141,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             WebAssemblyServices = webAssemblyServices;
             ServiceProvider = webAssemblyServices.Services!;
             ServiceDescriptors = webAssemblyServices.Descriptors;
-            additionalCallArgs.Add(new CallSideParameter("caller", () => this, typeof(ServiceCallDispatcher)));
+            additionalCallArgs.Add(new CallSideParameter(() => this, typeof(ServiceCallDispatcher)));
             LocalInfo = new ServiceCallDispatcherInfo { InstanceId = JS.InstanceId, GlobalThisTypeName = JS.GlobalThisTypeName };
             RemoteInfo = LocalInfo;
             _oninit.SetResult(0);
@@ -166,8 +171,19 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         /// <summary>
         /// Fired when a message event is received from the remote endpoint<br/>
+        /// ServiceCallDispatcher - the dispatcher that received the message<br/>
+        /// string - the event name<br/>
+        /// Array - the event data<br/>
         /// </summary>
-        public event Action<ServiceCallDispatcher, Array> OnMessage = default!;
+        public event OnMessageDelegate OnMessage = default!;
+        /// <summary>
+        /// Represents a method that handles a message event dispatched by a ServiceCallDispatcher.
+        /// </summary>
+        /// <param name="sender">The ServiceCallDispatcher instance that triggered the event.</param>
+        /// <param name="eventName">The name of the event being handled. This identifies the type of message received.</param>
+        /// <param name="data">An array containing the event data associated with the message. The contents and types of the array elements
+        /// depend on the specific event.</param>
+        public delegate void OnMessageDelegate(ServiceCallDispatcher sender, string eventName, Array data);
         /// <summary>
         /// Busy state changed delegate<br/>
         /// </summary>
@@ -263,7 +279,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         break;
                     case "event":
                         {
-                            OnMessage?.Invoke(this, args);
+                            var eventName = args.Shift<string>(); // 1
+                            OnMessage?.Invoke(this, eventName, args);
                         }
                         break;
                     case "callback":
@@ -436,15 +453,27 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
         }
         /// <summary>
-        /// 
+        /// Sends an event to the remote endpoint
         /// </summary>
-        /// <param name="eventName"></param>
-        /// <param name="data"></param>
+        /// <param name="eventName">event name</param>
+        /// <param name="data">event data</param>
         public void SendEvent(string eventName, object?[]? data = null)
         {
             var outMsg = new List<object?> { "event", eventName };
             if (data != null) outMsg.AddRange(data);
             _portSimple?.PostMessage(outMsg);
+        }
+        /// <summary>
+        /// Sends an event to the remote endpoint
+        /// </summary>
+        /// <param name="eventName">event name</param>
+        /// <param name="data">event data</param>
+        /// <param name="transferableList">List of transferable objects to be transferred</param>
+        public void SendEvent(string eventName, object?[] data, object[] transferableList)
+        {
+            var outMsg = new List<object?> { "event", eventName };
+            if (data != null) outMsg.AddRange(data);
+            _port?.PostMessage(outMsg, transferableList);
         }
         private async Task<object?> LocalCall(Type serviceType, MethodInfo methodInfo, object?[]? args = null)
         {
@@ -1325,8 +1354,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         }
         CallSideParameter? GetCallSideParameter(ParameterInfo p)
         {
-
-            return additionalCallArgs.Where(o => o.Name == p.Name && o.Type == p.ParameterType).FirstOrDefault();
+            return additionalCallArgs.Where(o => (o.Name == "" || o.Name == p.Name) && o.Type == p.ParameterType).FirstOrDefault();
         }
         /// <summary>
         /// Returns true if this instance has been disposed

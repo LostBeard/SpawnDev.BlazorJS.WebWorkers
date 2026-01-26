@@ -8,6 +8,96 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
     public class UnitTestsService(BlazorJSRuntime JS, WebWorkerService WebWorkerService, IMathsService MathService, AsyncCallDispatcherTest CallDispatcherBaseTestClass)
     {
         #region WebWorker
+        [TestMethod]
+        public async Task WebWorkerSendEventTest()
+        {
+            if (!WebWorkerService.WebWorkerSupported)
+            {
+                throw new UnsupportedTestException("Worker not supported by browser.");
+            }
+            using var worker = await WebWorkerService.GetWebWorker();
+            // attach event handler to receive events from the worker
+            var tcs = new TaskCompletionSource<string>();
+            worker!.OnMessage += (sender, eventName, data) =>
+            {
+                Console.WriteLine($"WebWorkerSendEventTest received event: {eventName} data: {data}");
+                if (eventName == "progress")
+                {
+                    var msgReceived = data.Shift<string>();
+                    tcs.TrySetResult(msgReceived);
+                }
+            };
+            // send a message that will trigger the event message
+            await worker.Run(()=> DelayAndSendMessage(default!, "Hello "));
+            // wait for the event for up to 5 seconds and then verify
+            string progressMsg = "";
+            try
+            {
+                progressMsg = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch
+            {
+                throw new Exception("Event not received.");
+            }
+            if (progressMsg != "Hello world!")
+            {
+                throw new Exception("Invalid response");
+            }
+        }
+        static async Task DelayAndSendMessage([FromLocal] ServiceCallDispatcher sender, string data)
+        {
+            if (sender == null)
+            {
+                throw new ArgumentNullException(nameof(sender));
+            }
+            await Task.Delay(50);
+            sender.SendEvent("progress", new object?[] { data + "world!" });
+        }
+        [TestMethod]
+        public async Task WebWorkerSendEventToParentsTest()
+        {
+            if (!WebWorkerService.WebWorkerSupported)
+            {
+                throw new UnsupportedTestException("Worker not supported by browser.");
+            }
+            using var worker = await WebWorkerService.GetWebWorker();
+            // attach event handler to receive events from the worker
+            var tcs = new TaskCompletionSource<string>();
+            worker!.OnMessage += (sender, eventName, data) =>
+            {
+                Console.WriteLine($"WebWorkerSendEventTest received event: {eventName} data: {data}");
+                if (eventName == "progress")
+                {
+                    var msgReceived = data.Shift<string>();
+                    tcs.TrySetResult(msgReceived);
+                }
+            };
+            // send a message that will trigger the event message
+            await worker.Run(() => WebWorkerSendEventToParentsTestWorker(default!, "Hello "));
+            // wait for the event for up to 5 seconds and then verify
+            string progressMsg = "";
+            try
+            {
+                progressMsg = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch
+            {
+                throw new Exception("Event not received.");
+            }
+            if (progressMsg != "Hello world!")
+            {
+                throw new Exception("Invalid response");
+            }
+        }
+        static async Task WebWorkerSendEventToParentsTestWorker([FromServices] WebWorkerService WebWorkerService, string data)
+        {
+            if (WebWorkerService == null)
+            {
+                throw new ArgumentNullException(nameof(WebWorkerService));
+            }
+            await Task.Delay(50);
+            WebWorkerService.SendEventToParents("progress", new object?[] { data + "world!" });
+        }
 
         [TestMethod]
         public async Task WebWorkerKeyedServiceTest()

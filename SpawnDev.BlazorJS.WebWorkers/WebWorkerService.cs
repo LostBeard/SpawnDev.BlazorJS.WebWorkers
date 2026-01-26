@@ -393,10 +393,12 @@ namespace SpawnDev.BlazorJS.WebWorkers
         const string AllInstancedId = "*";
         internal void BroadcastCall(string targetInstanceId, string cmd, params object?[]? args)
         {
-            var allArgs = new List<object?>();
-            allArgs.Add(targetInstanceId);
-            allArgs.Add(Info);
-            allArgs.Add(cmd);
+            var allArgs = new List<object?>
+            {
+                targetInstanceId,
+                Info,
+                cmd
+            };
             if (args != null && args.Length > 0) allArgs.AddRange(args);
             if (SharedBroadcastChannel != null)
             {
@@ -410,7 +412,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// </summary>
         /// <param name="eventName"></param>
         /// <param name="data"></param>
-        public void SendEventToParents(string eventName, params object?[]? data)
+        public void SendEventToParents(string eventName, object?[]? data = null)
         {
             if (DedicatedWorkerParent != null)
             {
@@ -419,6 +421,27 @@ namespace SpawnDev.BlazorJS.WebWorkers
             foreach (var p in SharedWorkerIncomingConnections)
             {
                 p.SendEvent(eventName, data);
+            }
+        }
+        /// <summary>
+        /// Sends an event with the specified name and associated data to all parent worker connections.
+        /// </summary>
+        /// <remarks>This method delivers the event to both dedicated and shared parent worker
+        /// connections, if present. The event is sent to all connected parents; if no parents are connected, the method
+        /// has no effect.</remarks>
+        /// <param name="eventName">The name of the event to send to parent workers. Cannot be null or empty.</param>
+        /// <param name="data">An array of event data objects to include with the event. Elements may be null if the event supports it.</param>
+        /// <param name="transferableList">An array of objects to transfer ownership to parent workers as part of the event. The contents depend on the
+        /// event and worker implementation.</param>
+        public void SendEventToParents(string eventName, object?[] data, object[] transferableList)
+        {
+            if (DedicatedWorkerParent != null)
+            {
+                DedicatedWorkerParent.SendEvent(eventName, data, transferableList);
+            }
+            foreach (var p in SharedWorkerIncomingConnections)
+            {
+                p.SendEvent(eventName, data, transferableList);
             }
         }
         /// <summary>
