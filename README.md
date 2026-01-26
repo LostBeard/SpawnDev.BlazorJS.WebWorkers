@@ -516,13 +516,13 @@ worker.OnMessage += (ServiceCallDispatcher sender, string eventName, Array data)
 ### Send event from Worker owner to worker
 Worker owners (Window or SharedWorker) can send events to their connected worker using the `WebWorker.SendEvent(string eventName, object?[]? data = null)` method.
 ```cs
-webWorker.SendEvent("progress", new PiProgress { Progress = piProgress });
+webWorker.SendEvent("progress", new[] { new PiProgress { Progress = piProgress } });
 ```
 
 ### Send event from SharedWebWorker or WebWorker to connected parent(s)
 SharedWebWorker and WebWorker instances can send events to their connected parent(s) using the `WebWorkerService.SendEventToParents(string eventName, object?[]? data = null)` method.
 ```cs
-webWorkerService.SendEventToParents("progress", new PiProgress { Progress = piProgress });
+webWorkerService.SendEventToParents("progress", new[] { new PiProgress { Progress = piProgress } });
 ```
 
 ## Transferable Objects

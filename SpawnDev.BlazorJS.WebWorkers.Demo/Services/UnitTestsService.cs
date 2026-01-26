@@ -28,7 +28,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
                 }
             };
             // send a message that will trigger the event message
-            await worker.Run(()=> DelayAndSendMessage(default!, "Hello "));
+            await worker.Run(() => DelayAndSendMessage(default!, "Hello "));
             // wait for the event for up to 5 seconds and then verify
             string progressMsg = "";
             try
@@ -51,7 +51,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
                 throw new ArgumentNullException(nameof(sender));
             }
             await Task.Delay(50);
-            sender.SendEvent("progress", new object?[] { data + "world!" });
+            sender.SendEvent("progress", new[] { data + "world!" });
         }
         [TestMethod]
         public async Task WebWorkerSendEventToParentsTest()
@@ -96,7 +96,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
                 throw new ArgumentNullException(nameof(WebWorkerService));
             }
             await Task.Delay(50);
-            WebWorkerService.SendEventToParents("progress", new object?[] { data + "world!" });
+            WebWorkerService.SendEventToParents("progress", new[] { data + "world!" });
         }
 
         [TestMethod]
