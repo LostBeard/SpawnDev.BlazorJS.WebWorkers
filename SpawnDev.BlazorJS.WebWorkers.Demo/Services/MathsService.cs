@@ -167,7 +167,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
                     if (progressDelta > 3 || i >= sumLength - 1)
                     {
                         lastReport = i;
-                        _webWorkerService.SendEventToParents("progress", new PiProgress() { Progress = i });
+                        _webWorkerService.SendEventToParents("progress", new[] { new PiProgress() { Progress = i } } );
                     }
                     return x;
                 })
@@ -188,7 +188,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
                     if (progressDelta > 3 || i >= sumLength - 1)
                     {
                         lastReport = i;
-                        _webWorkerService.SendEventToParents("progress", new PiProgress() { Progress = i });
+                        _webWorkerService.SendEventToParents("progress", new[] { new PiProgress() { Progress = i } });
                     }
                     return x;
                 })
