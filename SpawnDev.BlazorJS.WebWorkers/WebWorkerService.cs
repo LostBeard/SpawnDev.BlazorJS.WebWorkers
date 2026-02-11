@@ -489,6 +489,15 @@ namespace SpawnDev.BlazorJS.WebWorkers
 #if DEBUG && false
             JS.Log($"Instance lost: {instanceId}", instance.Info, Instances.Select(o => o.Info).ToList());
 #endif
+
+            // check if this instance is in SharedWorkerIncomingConnections and remove it if it is
+            var sharedWorkerConnection = SharedWorkerIncomingConnections.Where(o => o.RemoteInfo?.InstanceId == instanceId).ToList();
+            foreach (var c in sharedWorkerConnection)
+            {
+                SharedWorkerIncomingConnections.Remove(c);
+                c.Dispose();
+            }
+
             OnInstanceLost?.Invoke(instance);
             instance.Dispose();
             if (fireChangedEvent) OnInstancesChanged?.Invoke();
