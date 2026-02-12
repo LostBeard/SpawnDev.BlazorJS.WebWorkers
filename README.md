@@ -1,4 +1,3 @@
-
 # SpawnDev.BlazorJS.WebWorkers
 [![NuGet](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=SpawnDev.BlazorJS.WebWorkers)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers)  
 
@@ -10,7 +9,7 @@
 - [TaskPool](#webworkerservicetaskpool) support via WebWorkers
 - Component's can call their own private static methods in background threads (supports service injection)
 - Supports method parameter service injection via `[FromServices]` and `[FromKeyedServices]` parameter attributes
-- Works in Blazor WASM .Net 6, 7, 8, 9 and 10.
+- Works in Blazor WASM .Net 8, 9 and 10.
 - SharedArrayBuffer is not required. No special HTTP headers to configure.
 - Supports [transferable objects](#transferable-objects)
 - Run Blazor WASM in a ServiceWorker
@@ -19,9 +18,11 @@
 [Live Demo Repo](https://github.com/LostBeard/SpawnDev.BlazorJS.Test)
 
 ### Supported .Net Versions
-- .Net 6, 7, 8, 9 and 10
+- .Net 8, 9 and 10
 - Blazor WebAssembly Standalone App
 - Blazor Web App - Interactive WebAssembly mode without prerendering
+
+**Note:** SpawnDev.BlazorJS.WebWorkers version 3.x has dropped support for .Net 6 and 7. If you need to target .Net 6 or 7, please use version 2.x.
 
 \*\* .Net 9.0.0 has/had a bug that can appear during a `publish` build under very specific circumstances. 
 The issue arises when using a Razor Class Library Nuget package (like WebWorkers) from another RCL and also using 
@@ -316,6 +317,7 @@ private static async Task<long> CancellableMethod(double maxRunTimeMS, SharedCan
     return -1;
 }
 ```
+
 
 #### Limitation: SharedCancellationToken requires cross-origin isolation
 ```SharedCancellationToken``` and ```SharedCancellationTokenSource``` use a ```SharedArrayBuffer``` for signaling instead of postMessage like ```CancellationToken``` uses. This adds the benefit of working in both synchronous and asynchronous methods. However, they have their own limitation of requiring a cross-origin isolation due to ```SharedArrayBuffer``` restrictions.
