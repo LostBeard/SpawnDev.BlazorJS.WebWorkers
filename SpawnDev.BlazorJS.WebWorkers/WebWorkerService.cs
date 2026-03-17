@@ -176,7 +176,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (JS.IsBrowser)
             {
                 WebWorkerSupported = !JS.IsUndefined("Worker");
-                SharedWebWorkerSupported = !JS.IsUndefined("SharedWorker");
+                SharedWebWorkerSupported = !JS.IsUndefined("_sharedWorker");
                 ServiceWorkerSupported = !JS.IsUndefined("ServiceWorkerRegistration");
                 AppBaseUri = JS.Get<string?>("document?.baseURI") ?? JS.Get<string>("documentBaseURI");
                 var locationHref = JS.Get<string>("location.href");

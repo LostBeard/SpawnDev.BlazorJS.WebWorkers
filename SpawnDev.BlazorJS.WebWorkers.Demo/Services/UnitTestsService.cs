@@ -671,7 +671,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
         {
             if (!WebWorkerService.SharedWebWorkerSupported)
             {
-                throw new UnsupportedTestException("SharedWorker not supported by browser.");
+                throw new UnsupportedTestException("_sharedWorker not supported by browser.");
             }
 
             var thisInstanceId = JS.InstanceId;
@@ -696,7 +696,7 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
         {
             if (!WebWorkerService.SharedWebWorkerSupported)
             {
-                throw new UnsupportedTestException("SharedWorker not supported by browser.");
+                throw new UnsupportedTestException("_sharedWorker not supported by browser.");
             }
             // workerA1 and workerA2 will refer to the same shared worker
             // workerB is a separate worker instance
@@ -712,8 +712,8 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
             var valueGetWorkerA1 = await mathServiceA1.GetValueTest();
             var valueGetWorkerA2 = await mathServiceA2.GetValueTest();
             if (valueGetWorkerA1 != valueSetWorkerA1) throw new Exception("Unexpected result");
-            if (valueGetWorkerA2 != valueSetWorkerA1) throw new Exception("SharedWorker appears not shared");
-            if (valueGetWorkerB == valueSetWorkerA1) throw new Exception("SharedWorker with different name unexpectedly same as first SharedWorker");
+            if (valueGetWorkerA2 != valueSetWorkerA1) throw new Exception("_sharedWorker appears not shared");
+            if (valueGetWorkerB == valueSetWorkerA1) throw new Exception("_sharedWorker with different name unexpectedly same as first _sharedWorker");
         }
         #endregion
 
