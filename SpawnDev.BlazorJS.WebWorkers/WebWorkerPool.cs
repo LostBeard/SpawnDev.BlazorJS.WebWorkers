@@ -235,6 +235,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     {
                         worker.AcquireLock();
                         if (job.TrySetResult(worker)) return;
+                        worker.ReleaseLock();
                     }
                 }
                 // no work to do
