@@ -125,7 +125,7 @@ globalThis.EventTargetFake ??= class {
             for (var i = 0; i < callbacks.length; i++) {
                 var listener = callbacks[i];
                 if (listener.callback === callback) {
-                    delete callbacks[i];
+                    callbacks.splice(i, 1);
                     return true;
                 }
             }
@@ -177,14 +177,14 @@ globalThis.Node ??= class extends EventTargetFake {
         if (!p) return null;
         var i = p.childNodes.indexOf(this);
         if (i < 1) return null;
-        return i - 1;
+        return p.childNodes[i - 1];
     }
     get nextSibling() {
         var p = this.parentNode;
         if (!p) return null;
         var i = p.childNodes.indexOf(this);
         if (i == -1 || i == p.childNodes.length - 1) return null;
-        return i + 1;
+        return p.childNodes[i + 1];
     }
     insertBefore(newNode, referenceNode) {
         var refI = this.getChildNodeIndex(referenceNode);
@@ -371,7 +371,7 @@ globalThis.Document ??= class extends Node {
         consoleLog(this.constructor.name, 'querySelectorAll', selector);
         var nodes = this.descendants();
         if (selector === '*') {
-            return descendants;
+            return nodes;
         }
         // id search
         var idPatt = new RegExp('^#([a-z][a-z0-9_-]*)$');

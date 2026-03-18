@@ -115,7 +115,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         ServiceWorker_OnMessageError(e.JSRefMove<MissedExtendableMessageEvent>());
                         break;
                     case "notificationclick":
-                        ServiceWorker_OnNotificationClose(e.JSRefMove<MissedNotificationEvent>());
+                        ServiceWorker_OnNotificationClick(e.JSRefMove<MissedNotificationEvent>());
                         break;
                     case "notificationclose":
                         ServiceWorker_OnNotificationClose(e.JSRefMove<MissedNotificationEvent>());

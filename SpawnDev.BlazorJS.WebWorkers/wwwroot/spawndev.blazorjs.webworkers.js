@@ -179,7 +179,7 @@ var initWebWorkerBlazor = async function () {
     // do on the fly worker compatiblility patching if needed
     // add webworker-enabled attribute to the runtime if it is not already there
     function prePatchedCheck(jsStr) {
-        return jsStr.indexOf('importShim(') !== -1 || jsStr.indexOf('// FRAMEWORK-PATCHED' || jsStr.indexOf('exportShim(') !== -1) !== -1;
+        return jsStr.indexOf('importShim(') !== -1 || jsStr.indexOf('// FRAMEWORK-PATCHED') !== -1 || jsStr.indexOf('exportShim(') !== -1;
     }
     async function detectBlazorRuntime(scriptNodes, overrideUnitedRuntime) {
         for (var scriptNode of scriptNodes) {

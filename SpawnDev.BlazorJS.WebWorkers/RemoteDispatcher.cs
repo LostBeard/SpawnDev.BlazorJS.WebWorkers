@@ -139,7 +139,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
                                 await ReadyFlagResultReceived(args1);
                                 if (!WhenReady.IsCompleted)
                                 {
-                                    Console.WriteLine("Ready set");
                                     WhenReadySource.TrySetResult();
                                     ReadyStateChanged?.Invoke(this);
                                 }
@@ -626,7 +625,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 waitingResponse.Remove(msgId);
                 waiter.TrySetResult(msg);
             }
-            msg.Dispose();
+            else
+            {
+                msg.Dispose();
+            }
         }
         protected static string SerializeException(Exception exception)
         {
@@ -647,7 +649,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         protected Dictionary<string, Func<Array, Task>> DynamicCallables = new Dictionary<string, Func<Array, Task>>();
         protected static Action<T0> CreateTypedActionT1<T0>(Action<object?[]> arg) => new Action<T0>((t0) => arg(new object[] { t0 }));
         protected static Action<T0, T1> CreateTypedActionT2<T0, T1>(Action<object?[]> arg) => new Action<T0, T1>((t0, t1) => arg(new object[] { t0, t1 }));
-        protected static Action<T0, T1, T2> CreateTypedActionT3<T0, T1, T2>(Action<object?[]> arg) => new Action<T0, T1, T2>((t0, t1, t2) => arg(new object[] { t0, t1 }));
+        protected static Action<T0, T1, T2> CreateTypedActionT3<T0, T1, T2>(Action<object?[]> arg) => new Action<T0, T1, T2>((t0, t1, t2) => arg(new object[] { t0, t1, t2 }));
         protected static Action<T0, T1, T2, T3> CreateTypedActionT4<T0, T1, T2, T3>(Action<object?[]> arg) => new Action<T0, T1, T2, T3>((t0, t1, t2, t3) => arg(new object[] { t0, t1, t2, t3 }));
         protected static Action<T0, T1, T2, T3, T4> CreateTypedActionT5<T0, T1, T2, T3, T4>(Action<object?[]> arg) => new Action<T0, T1, T2, T3, T4>((t0, t1, t2, t3, t4) => arg(new object[] { t0, t1, t2, t3, t4 }));
         protected static object CreateTypedAction(Type[] paramTypes, Action<object?[]> arg)

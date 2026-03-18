@@ -46,6 +46,7 @@ self.addEventListener('connect', function (e) {
                     instanceInfo: instanceInfo,
                     port: port,
                 };
+                break;
             case "dropOff":
                 var toInstanceId = msg.shift();
                 var fromInstanceInfo = msg.shift();

@@ -329,10 +329,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         }
                         break;
                 }
+                args.Dispose();
             }
             catch (Exception ex)
             {
-                JS.Log("ERROR: ", e);
                 JS.Log($"ERROR: {ex.Message}");
                 JS.Log($"ERROR stack trace: {ex.StackTrace}");
             }
@@ -555,7 +555,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             CheckBusyStateChanged();
             try
             {
-                var returnArray = await workerTask.Task;
+                using var returnArray = await workerTask.Task;
                 // remove any request callbacks (currently only Action)
                 var keysToRemove = _actionHandles.Values.Where(o => o.RequestId == requestId).Select(o => o.Id).ToArray();
                 foreach (var keyToRemove in keysToRemove) _actionHandles.Remove(keyToRemove);
@@ -621,7 +621,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             CheckBusyStateChanged();
             try
             {
-                var returnArray = await workerTask.Task;
+                using var returnArray = await workerTask.Task;
                 // remove any request callbacks (currently only Action)
                 var keysToRemove = _actionHandles.Values.Where(o => o.RequestId == requestId).Select(o => o.Id).ToArray();
                 foreach (var key in keysToRemove) _actionHandles.Remove(key);
@@ -1375,6 +1375,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
         /// <summary>
         /// Finalizer
@@ -1382,7 +1383,6 @@ namespace SpawnDev.BlazorJS.WebWorkers
         ~ServiceCallDispatcher()
         {
             Dispose(false);
-            GC.SuppressFinalize(this);
         }
         /// <summary>
         /// Creates a typed Action

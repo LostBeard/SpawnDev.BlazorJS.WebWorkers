@@ -379,7 +379,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             catch (Exception ex)
             {
                 // Invalid message
-                Console.WriteLine($"InstanceConnectChannel_OnMessage: {ex.Message}");
+                // Invalid instance connect message
             }
             finally
             {

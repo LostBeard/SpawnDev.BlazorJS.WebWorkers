@@ -76,7 +76,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="SpawnDev.BlazorJS" Version="3.4.0" />
+		<PackageReference Include="SpawnDev.BlazorJS" Version="3.5.0" />
 	</ItemGroup>
 
 	<ItemGroup>

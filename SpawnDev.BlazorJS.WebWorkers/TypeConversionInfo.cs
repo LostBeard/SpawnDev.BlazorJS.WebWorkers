@@ -431,7 +431,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             catch (Exception ex)
             {
-                Console.WriteLine("TypeConversionInfo error: " + ex.ToString());
+                // TypeConversionInfo error - type may not be serializable
             }
             return conversionInfo;
         }
