@@ -176,7 +176,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (JS.IsBrowser)
             {
                 WebWorkerSupported = !JS.IsUndefined("Worker");
-                SharedWebWorkerSupported = !JS.IsUndefined("_sharedWorker");
+                SharedWebWorkerSupported = !JS.IsUndefined("SharedWorker");
                 ServiceWorkerSupported = !JS.IsUndefined("ServiceWorkerRegistration");
                 AppBaseUri = JS.Get<string?>("document?.baseURI") ?? JS.Get<string>("documentBaseURI");
                 var locationHref = JS.Get<string>("location.href");
@@ -793,6 +793,73 @@ namespace SpawnDev.BlazorJS.WebWorkers
             }
             return false;
         }
+
+        /// <summary>
+        /// Creates a new a WebWorker instance and returns it when it when it is ready for use.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<AppInstance?> GetIFrameWorker(CancellationToken cancellationToken = default)
+        {
+            AppInstance? ret = null;
+            if (!JS.IsWindow)
+            {
+                // only works in window and service work scopes
+                return ret;
+            }
+            var childId = Guid.NewGuid().ToString();
+            var queryParams = new Dictionary<string, string>();
+            queryParams[instanceOwnerIdKey] = InstanceId;
+            queryParams[childIdKey] = childId;
+            var pathUrl = new Uri(AppBaseUri);
+            var newWindowUrl = pathUrl.ToString(); ;
+            newWindowUrl += (newWindowUrl.Contains("?") ? "&" : "?") + string.Join('&', queryParams.Select(o => $"{Uri.EscapeDataString(o.Key)}={Uri.EscapeDataString(o.Value)}"));
+            // create iframe
+            using var document = JS.GetDocument();
+            if (document == null) return null;
+            using var iframe = document!.CreateElement<HTMLIFrameElement>("iframe");
+            iframe.Style["display"] = "none";
+            iframe.Src = newWindowUrl; // Set the source URL
+            document.Body!.AppendChild(iframe); // Add it to the page
+            // wait
+            var tcs = new TaskCompletionSource<AppInstance?>();
+            var task = tcs.Task;
+            // set a deault timeout if one wasn't set
+            CancellationTokenSource? cts = null;
+            if (cancellationToken == default)
+            {
+                cts = new CancellationTokenSource(20000);
+                cancellationToken = cts.Token;
+            }
+            cancellationToken.Register(() =>
+            {
+                if (task.IsCompleted) return;
+                if (OpenWindowWaiters.ContainsKey(childId))
+                {
+                    OpenWindowWaiters.Remove(childId);
+                }
+                tcs.TrySetException(new Exception("Timedout"));
+            });
+            var newInstanceHandler = new Action<AppInstance>((appInstance) =>
+            {
+                if (task.IsCompleted) return;
+                if (OpenWindowWaiters.ContainsKey(childId))
+                {
+                    OpenWindowWaiters.Remove(childId);
+                }
+                tcs.TrySetResult(appInstance);
+            });
+            OpenWindowWaiters.Add(childId, newInstanceHandler);
+            try
+            {
+                ret = await task;
+            }
+            finally
+            {
+                cts?.Dispose();
+            }
+            return ret;
+        }
+
         /// <summary>
         /// Creates a new a WebWorker instance and returns it when it when it is ready for use.
         /// </summary>
@@ -818,6 +885,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
             await webWorker.WhenReady;
             return webWorker;
         }
+
         /// <summary>
         /// Creates a new a WebWorker instance and returns.<br/>
         /// The property WhenReady will complete when Blazor is loaded and ready in the worker.<br/>
