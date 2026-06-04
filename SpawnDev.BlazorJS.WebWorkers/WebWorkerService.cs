@@ -190,6 +190,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 var isTaskPoolWorker = queryParams["taskPool"] == "1" && JS.IsScope(GlobalScope.DedicatedAndSharedWorkers);
                 var instanceOwnerId = queryParams[instanceOwnerIdKey];
                 var instanceChildId = queryParams[childIdKey];
+
                 if (!string.IsNullOrEmpty(instanceOwnerId) && !string.IsNullOrEmpty(instanceChildId))
                 {
                     queryParams.Remove(childIdKey);
@@ -207,6 +208,7 @@ namespace SpawnDev.BlazorJS.WebWorkers
                 }
                 Info = new AppInstanceInfo
                 {
+                    ParentInstanceId = instanceOwnerId,
                     OwnerId = instanceOwnerId,
                     ChildId = instanceChildId,
                     InstanceId = InstanceId,
@@ -216,6 +218,14 @@ namespace SpawnDev.BlazorJS.WebWorkers
                     Url = locationHref,
                     TaskPoolWorker = isTaskPoolWorker,
                 };
+                if (js.IsWindow)
+                {
+                    using var frameElement = JS.Get<HTMLIFrameElement>("frameElement");
+                    if (frameElement != null)
+                    {
+                        Info.IFrameWorker = !string.IsNullOrWhiteSpace(instanceOwnerId);
+                    }
+                }
                 BroadcastChannelSupported = !JS.IsUndefined(nameof(BroadcastChannel));
                 if (BroadcastChannelSupported)
                 {
@@ -630,6 +640,8 @@ namespace SpawnDev.BlazorJS.WebWorkers
                         // this window is owned by another instance
                         // todo I guess nothing really, it knows when this winow is started and is ready
                         // could load Info.Url if it is set
+
+                        JS.Log($"--- window", Info);
                     }
                 }
                 else if (JS.GlobalThis is DedicatedWorkerGlobalScope workerGlobalScope)
@@ -982,6 +994,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 webWorkerOptions.QueryParams["indexHtml"] = WorkerIndexHtml;
             }
+            var childId = Guid.NewGuid().ToString();
+            webWorkerOptions.QueryParams[instanceOwnerIdKey] = InstanceId;
+            webWorkerOptions.QueryParams[childId] = childId;
             if (string.IsNullOrEmpty(webWorkerOptions.ScriptUrl))
             {
                 webWorkerOptions.ScriptUrl = webWorkerOptions.WorkerOptions.Type == "module" ? WebWorkerModuleJSScript : WebWorkerJSScript;
@@ -1012,6 +1027,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 queryParams["indexHtml"] = WorkerIndexHtml;
             }
+            var childId = Guid.NewGuid().ToString();
+            queryParams[instanceOwnerIdKey] = InstanceId;
+            queryParams[childId] = childId;
             var scriptUrl = WebWorkerJSScript;
             if (queryParams.Count > 0)
             {
@@ -1039,6 +1057,9 @@ namespace SpawnDev.BlazorJS.WebWorkers
             {
                 queryParams["indexHtml"] = WorkerIndexHtml;
             }
+            var childId = Guid.NewGuid().ToString();
+            queryParams[instanceOwnerIdKey] = InstanceId;
+            queryParams[childId] = childId;
             var scriptUrl = WebWorkerJSScript;
             if (queryParams.Count > 0)
             {

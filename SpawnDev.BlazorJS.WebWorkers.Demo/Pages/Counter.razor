@@ -1,26 +1,71 @@
 ﻿@page "/counter"
+@using SpawnDev.BlazorJS.JSObjects
 @implements IDisposable
+
 
 <PageTitle>Counter</PageTitle>
 
 <h1>Window Shared Counter</h1>
 <p>
-    Open this page in another window. You will see that the new window will have the same counter value as this window. 
-    Clicking the button on either window will increment the counter on all windows. 
+    Open this page in another window. You will see that the new window will have the same counter value as this window.
+    Clicking the button on either window will increment the counter on all windows.
 </p>
 <p>
-    This demonstrates calling a static method in another window inside a component.<br/>
+    This demonstrates calling a static method in another window inside a component.<br />
 </p>
 
 <p role="status">Current count: @currentCount</p>
 
+<p>
+    <div>Instance count: @(WebWorkerService.Instances.Count)</div>
+    @foreach (var instance in WebWorkerService.Instances)
+    {
+        var thisInstance = WebWorkerService.InstanceId == instance.Info.InstanceId;
+        var name = string.IsNullOrEmpty(instance.Info.Name) ? "[UNNAMED]" : instance.Info.Name;
+        var scope = instance.Info.Scope.ToString();
+        if (instance.Info.IFrameWorker) scope += " IFrame";
+        if (thisInstance) name += " (THIS)";
+        <div style="padding: 5px;">
+            <div>Name: @name</div>
+            <div>Scope: @scope</div>
+            <div>InstanceId: @instance.Info.InstanceId</div>
+            <div>ParentId: @instance.Info.ParentInstanceId</div>
+            <div>OwnerId: @instance.Info.OwnerId</div>
+            <div><button class="btn btn-primary" @onclick="@(() => CloseIt(instance))">❌</button></div>
+        </div>
+    }
+</p>
+
 <button class="btn btn-primary" @onclick="IncrementCount">Increment Count</button>
 
 <button class="btn btn-primary" @onclick="OpenNewWindow">Open New Window</button>
+<button class="btn btn-primary" @onclick="OpenNewIFrameWorker">New IFrame Worker</button>
+<button class="btn btn-primary" @onclick="OpenNewWebWorker">New WebWorker</button>
+<button class="btn btn-primary" @onclick="OpenNewSharedWorker">New SharedWebWorker</button>
 
 @code {
     [Inject]
     WebWorkerService WebWorkerService { get; set; } = default!;
+
+    static void CloseThis()
+    {
+        var JS = BlazorJSRuntime.JS;
+        JS.Log("Closing...");
+        Toolbox.Async.Run(async () =>
+        {
+            await Task.Delay(1000);
+            using var frameElement = JS.Get<HTMLIFrameElement>("frameElement");
+            if (frameElement != null)
+            {
+                frameElement.Remove();
+            }
+            try
+            {
+                JS.CallVoid("close");
+            }
+            catch { }
+        });
+    }
 
     private int currentCount = 0;
     // holds the running instance of this component, if one
@@ -30,6 +75,52 @@
     {
         var window = await WebWorkerService.OpenWindow();
         var nmt = true;
+    }
+
+    async Task CloseIt(AppInstance instance)
+    {
+        await instance.Run(() => CloseThis());
+    }
+
+    async Task OpenNewIFrameWorker()
+    {
+        var instance = await WebWorkerService.GetIFrameWorker();
+        var nmt = true;
+    }
+
+    async Task OpenNewWebWorker()
+    {
+        var instance = await WebWorkerService.GetWebWorker();
+        var nmt = true;
+    }
+
+    async Task OpenNewSharedWorker()
+    {
+        var name = $"SHARED_{DateTime.Now.ToString("s")}";
+        var instance = await WebWorkerService.GetSharedWebWorker(name);
+        var nmt = true;
+    }
+
+    protected override void OnInitialized()
+    {
+        WebWorkerService.OnInstanceFound += WebWorkerService_OnInstanceFound;
+        WebWorkerService.OnInstanceLost += WebWorkerService_OnInstanceLost;
+        WebWorkerService.OnInstancesChanged += WebWorkerService_OnInstancesChanged;
+    }
+
+    void WebWorkerService_OnInstancesChanged()
+    {
+
+    }
+
+    void WebWorkerService_OnInstanceFound(AppInstance instance)
+    {
+        StateHasChanged();
+    }
+
+    void WebWorkerService_OnInstanceLost(AppInstance instance)
+    {
+        StateHasChanged();
     }
 
     // this static method can be called by other running instances
@@ -71,6 +162,9 @@
     {
         // unset this instance on the static var
         instance = null;
+        WebWorkerService.OnInstanceFound -= WebWorkerService_OnInstanceFound;
+        WebWorkerService.OnInstanceLost -= WebWorkerService_OnInstanceLost;
+        WebWorkerService.OnInstancesChanged -= WebWorkerService_OnInstancesChanged;
     }
     private async Task IncrementCount()
     {

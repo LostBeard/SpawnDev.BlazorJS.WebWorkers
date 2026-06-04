@@ -27,6 +27,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 // add service(s) that holds unit tests
 builder.Services.AddSingleton<UnitTestsService>();
+//builder.Services.AddSingleton<IFrameUnitTestsService>();
 
 // add root elements if running in the window
 if (JS.IsWindow)

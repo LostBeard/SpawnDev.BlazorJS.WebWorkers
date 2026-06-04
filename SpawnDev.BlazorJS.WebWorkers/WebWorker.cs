@@ -2,6 +2,9 @@
 
 namespace SpawnDev.BlazorJS.WebWorkers
 {
+    /// <summary>
+    /// WebWorker
+    /// </summary>
     public class WebWorker : ServiceCallDispatcher, IDisposable
     {
         public static bool Supported;
