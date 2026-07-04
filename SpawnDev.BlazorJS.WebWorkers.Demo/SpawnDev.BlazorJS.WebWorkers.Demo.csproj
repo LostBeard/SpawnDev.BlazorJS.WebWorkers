@@ -6,6 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<CompressionEnabled>false</CompressionEnabled>
 		<LangVersion>latest</LangVersion>
+		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -19,11 +20,12 @@
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="3.2.3" />
+		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="3.2.4-local.3" />
 	</ItemGroup>
 
 	<!-- SpawnDev.BlazorJS.WebWorkers config -->
 	<PropertyGroup>
+		<_DebugSpawnDevWebWorkersBuildTasks>true</_DebugSpawnDevWebWorkersBuildTasks>
 		<!-- 
 		WebWorkerPatchFramework
 		- To run Blazor WASM in non-window scopes (DedicatedWorker, SharedWorker, ServiceWorker) Blazor framework files need to be patched.
@@ -33,6 +35,6 @@
 		- true  - patch during build (required for ServiceWorker module mode, and Chrome browser extension background ServiceWorker)
 		! NOTE - The asset manifest file (service-worker-assets.js) will be updated during publish build if using the ServiceWorkerAssetsManifest flag and WebWorkerPatchFramework == true
 		-->
-		<WebWorkerPatchFramework>false</WebWorkerPatchFramework>
+		<WebWorkerPatchFramework>true</WebWorkerPatchFramework>
 	</PropertyGroup>
 </Project>

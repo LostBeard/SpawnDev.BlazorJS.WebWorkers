@@ -19,6 +19,30 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
         public string AssetManifestFilePath = "";
         bool PatchManifest = false;
 
+        /// <summary>
+        /// .Net 20 fingerprints files, this method allwos using the un-fingerprinted path to find the real path if it has been altered by fignerprinting.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        string GetAppFilePath(string path)
+        {
+            // if the path exists, no need to check for a fignerprinted version
+            if (File.Exists(path)) return path;
+            var ext = Path.GetExtension(path);
+            var baseName = Path.GetFileNameWithoutExtension(path);
+            var dirName = Path.GetDirectoryName(path);
+            var files = Directory.EnumerateFiles(dirName);
+            var fNamePattern = new Regex($@"^{baseName}\.[a-z0-9]{{10}}{ext.Replace(".", @"\.")}$");
+            foreach (var file in files)
+            {
+                var fName = Path.GetFileName(file);
+                if (fNamePattern.IsMatch(fName))
+                {
+                    return file;
+                }
+            }
+            return null;
+        }
         public BlazorWASMFrameworkTool(string wwwrootPath, string contentPath, string assetManifestFile)
         {
             AssetManifestFileName = assetManifestFile;
@@ -39,8 +63,9 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                 throw new Exception("_framework directory not found");
             }
             var dotnetJSPublishPath = Path.Combine(FrameworkDir, "dotnet.js");
+            var dotnetJSPublishPathReal = GetAppFilePath(dotnetJSPublishPath);
             IsPublishBuild = File.Exists(dotnetJSPublishPath);
-            if (!IsPublishBuild && !File.Exists(dotnetJSPublishPath))
+            if (dotnetJSPublishPathReal == null)
             {
                 throw new Exception("dotnet.js not found");
             }
@@ -163,7 +188,9 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                     js = "(()=>{" + newLine + js + newLine + "})();" + newLine;
                 }
                 // if the blazor entry point, add patch support code
-                if (filename == "blazor.webassembly.js")
+
+                var isBlazorWebAssemblyJS = Regex.IsMatch(filename, @"blazor\.webassembly(?:\.[a-z0-9]{10})?\.js");
+                if (isBlazorWebAssemblyJS)
                 {
                     // this is blazor entry point.
                     // add patch support code to this file
