@@ -989,21 +989,18 @@ namespace SpawnDev.BlazorJS.WebWorkers
             if (!WebWorkerSupported) return null;
             webWorkerOptions ??= new SharedWebWorkerOptions();
             webWorkerOptions.WorkerOptions ??= new SharedWorkerOptions();
-            webWorkerOptions.QueryParams ??= new Dictionary<string, string>();
+            var queryParams = new Dictionary<string, string>();
             if (!string.IsNullOrEmpty(WorkerIndexHtml))
             {
-                webWorkerOptions.QueryParams["indexHtml"] = WorkerIndexHtml;
+                queryParams["indexHtml"] = WorkerIndexHtml;
             }
-            var childId = Guid.NewGuid().ToString();
-            webWorkerOptions.QueryParams[instanceOwnerIdKey] = InstanceId;
-            webWorkerOptions.QueryParams[childId] = childId;
             if (string.IsNullOrEmpty(webWorkerOptions.ScriptUrl))
             {
                 webWorkerOptions.ScriptUrl = webWorkerOptions.WorkerOptions.Type == "module" ? WebWorkerModuleJSScript : WebWorkerJSScript;
             }
-            if (webWorkerOptions.QueryParams.Count > 0)
+            if (queryParams.Count > 0)
             {
-                webWorkerOptions.ScriptUrl += "?" + string.Join('&', webWorkerOptions.QueryParams.Select(o => $"{o.Key}={o.Value}"));
+                webWorkerOptions.ScriptUrl += "?" + string.Join('&', queryParams.Select(o => $"{o.Key}={o.Value}"));
             }
             webWorkerOptions.WorkerOptions.Name ??= "";
             var worker = new SharedWorker(webWorkerOptions.ScriptUrl, webWorkerOptions.WorkerOptions);
@@ -1020,16 +1017,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (!SharedWebWorkerSupported) return null;
             var queryParams = new Dictionary<string, string>();
-#if DEBUG
-            queryParams["forceCompatMode"] = "0";
-#endif
             if (!string.IsNullOrEmpty(WorkerIndexHtml))
             {
                 queryParams["indexHtml"] = WorkerIndexHtml;
             }
-            var childId = Guid.NewGuid().ToString();
-            queryParams[instanceOwnerIdKey] = InstanceId;
-            queryParams[childId] = childId;
             var scriptUrl = WebWorkerJSScript;
             if (queryParams.Count > 0)
             {
@@ -1050,16 +1041,10 @@ namespace SpawnDev.BlazorJS.WebWorkers
         {
             if (!SharedWebWorkerSupported) return null;
             var queryParams = new Dictionary<string, string>();
-#if DEBUG
-            queryParams["forceCompatMode"] = "0";
-#endif
             if (!string.IsNullOrEmpty(WorkerIndexHtml))
             {
                 queryParams["indexHtml"] = WorkerIndexHtml;
             }
-            var childId = Guid.NewGuid().ToString();
-            queryParams[instanceOwnerIdKey] = InstanceId;
-            queryParams[childId] = childId;
             var scriptUrl = WebWorkerJSScript;
             if (queryParams.Count > 0)
             {
