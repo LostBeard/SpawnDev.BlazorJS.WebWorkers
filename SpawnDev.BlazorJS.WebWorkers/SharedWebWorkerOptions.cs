@@ -18,9 +18,5 @@ namespace SpawnDev.BlazorJS.WebWorkers
         /// classic - "spawndev.blazorjs.webworkers.js"<br/>
         /// </summary>
         public string? ScriptUrl { get; set; } = null;
-        /// <summary>
-        /// Additional query parameters to add to the worker script URL.<br/>
-        /// </summary>
-        public Dictionary<string, string>? QueryParams { get; set; } = null;
     }
 }
