@@ -200,6 +200,14 @@ namespace SpawnDev.BlazorJS.WebWorkers.Build.Tasks
                     var postPatch = ReadPatchFile("patch-post");
                     js = $"{prePatch} {newLine} {js} {newLine} {postPatch}";
                 }
+                var isDotNetJS = Regex.IsMatch(filename, @"dotnet(?:\.[a-z0-9]{10})?\.js");
+                if (isDotNetJS)
+                {
+                    // in .Net 10 this file has sha256 hashes of app files that need to be updated
+                    // this is blazor entry point.
+                    // add patch support code to this file
+                    // TODO
+                }
                 var changed = orig != js;
                 if (changed)
                 {
