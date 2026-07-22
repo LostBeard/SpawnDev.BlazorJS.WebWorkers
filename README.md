@@ -1,6 +1,8 @@
 # SpawnDev.BlazorJS.WebWorkers
 [![NuGet](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=SpawnDev.BlazorJS.WebWorkers)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers)  
 
+> 💜 **Built and maintained by one independent developer** — no company, no overhead, just code. If SpawnDev.BlazorJS.WebWorkers saves you time, please consider [**sponsoring its development »**](https://github.com/sponsors/LostBeard). Sponsorship is what keeps it alive and maintained.
+
 - Call services in separate threads with WebWorkers and SharedWebWorkers 
 - Call services in other Windows
 - Add and remove services at runtime ([Runtime Services](#runtime-services))
