@@ -20,7 +20,7 @@
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="3.2.4" />
+		<PackageReference Include="SpawnDev.BlazorJS.WebWorkers" Version="3.2.9" />
 	</ItemGroup>
 
 	<!-- SpawnDev.BlazorJS.WebWorkers config -->

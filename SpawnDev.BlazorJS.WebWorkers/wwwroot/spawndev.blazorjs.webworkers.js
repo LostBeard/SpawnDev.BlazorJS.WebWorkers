@@ -296,12 +296,19 @@ var initWebWorkerBlazor = async function () {
         // Ex(_content/SpawnDev.BlazorJS/SpawnDev.BlazorJS.lib.module.js)
         // export function beforeStart(options, extensions) {
         // export function afterStarted(options, extensions) {
-        var exportPatt = /\bexport[ \t]+function[ \t]+([^ \t(]+)/g;
-        jsStr = jsStr.replace(exportPatt, '_exportsOverride.$1 = function $1');
-        // To match: _framework/blazor-hotreload.
+        // To match also: _framework/blazor-hotreload.
         // export async function receiveHotReloadAsync() {
-        exportPatt = /\bexport[ \t]+async[ \t]+function[ \t]+([^ \t(]+)/g;
-        jsStr = jsStr.replace(exportPatt, '_exportsOverride.$1 = async function $1');
+        // An exported function stays a function DECLARATION (export keyword removed) and is added to the exports AFTER the module
+        // body: a declaration binds its name in the module scope and is hoisted, as in a real ES module, so the module's own code can
+        // call it (before or after its definition). The old rewrite, `_exportsOverride.X = function X`, made it a function EXPRESSION,
+        // whose name is bound only inside itself: a module that called its own exported function threw "X is not defined"
+        // (SpawnDev.Blazor.BootRecovery 1.0.0's initializer calls installBootRecovery(), and the worker's .NET boot died, 2026-11-22).
+        var exportedFunctions = [];
+        var exportPatt = /\bexport[ \t]+(async[ \t]+)?function([ \t]*\*)?[ \t]*([A-Za-z0-9$_]+)/g;
+        jsStr = jsStr.replace(exportPatt, function (m, asyncKeyword, star, name) {
+            exportedFunctions.push(name);
+            return (asyncKeyword || '') + 'function' + (star ? star.trim() : '') + ' ' + name;
+        });
         // handle exports from
         // dotnet.7.0.0.amub20uvka.js
         // export default createDotnetRuntime
@@ -323,7 +330,10 @@ var initWebWorkerBlazor = async function () {
         // export { dotnet, exit, INTERNAL };
         exportPatt = /\bexport\b[ \t]*(\{[^}]+\})/g;
         jsStr = jsStr.replace(exportPatt, '_exportsOverride = Object.assign(_exportsOverride, $1)');
-        var modulize = `let _exportsOverride = {}; ${jsStr}; return _exportsOverride;`;
+        // `typeof` guard: the pattern also matches text that only looks like an export (a comment or a string saying
+        // "export function X"); typeof of an undeclared name is "undefined" instead of a ReferenceError.
+        var exportedFunctionAssignments = exportedFunctions.map(function (name) { return `if (typeof ${name} === 'function') _exportsOverride.${name} = ${name};`; }).join(' ');
+        var modulize = `let _exportsOverride = {}; ${jsStr}; ${exportedFunctionAssignments} return _exportsOverride;`;
         return modulize;
     }
     async function initializeBlazor() {

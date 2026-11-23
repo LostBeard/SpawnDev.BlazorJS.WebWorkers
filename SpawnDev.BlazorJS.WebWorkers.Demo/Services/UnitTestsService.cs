@@ -8,6 +8,23 @@ namespace SpawnDev.BlazorJS.WebWorkers.Demo.Services
     public class UnitTestsService(BlazorJSRuntime JS, WebWorkerService WebWorkerService, IMathsService MathService, AsyncCallDispatcherTest CallDispatcherBaseTestClass)
     {
         #region WebWorker
+        // The app's JS initializer (wwwroot/SpawnDev.BlazorJS.WebWorkers.Demo.lib.module.js) calls its own exported function when the
+        // module loads. In a worker, the module patcher must keep that working: it rewrote exported functions into expressions, the
+        // call threw "countInitializerRun is not defined", and the worker never booted (found 2026-11-22 with SpawnDev.Blazor.BootRecovery).
+        [TestMethod]
+        public async Task WebWorkerAppInitializerCallingItsOwnExportRuns()
+        {
+            if (!WebWorkerService.WebWorkerSupported)
+            {
+                throw new UnsupportedTestException("Worker not supported by browser.");
+            }
+            using var worker = await WebWorkerService.GetWebWorker();
+            var runs = await worker!.Run(() => InitializerRunCount());
+            if (runs < 1) throw new Exception($"the app's JS initializer did not run in the worker (runs: {runs})");
+        }
+
+        static int InitializerRunCount() => BlazorJSRuntime.JS.Get<int?>("__webWorkersDemoInitializerRuns") ?? 0;
+
         [TestMethod]
         public async Task WebWorkerSendEventTest()
         {
