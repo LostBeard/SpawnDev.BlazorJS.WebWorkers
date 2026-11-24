@@ -1,6 +1,14 @@
+<div align="center">
+
 # SpawnDev.BlazorJS.WebWorkers
-[![NuGet](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=SpawnDev.BlazorJS.WebWorkers)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers)  
-[![GitHub Sponsor](https://img.shields.io/github/sponsors/LostBeard?label=Sponsor&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/LostBeard)
+
+[![NuGet](https://img.shields.io/nuget/v/SpawnDev.BlazorJS.WebWorkers.svg?label=nuget&logo=nuget)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers)
+[![Downloads](https://img.shields.io/nuget/dt/SpawnDev.BlazorJS.WebWorkers.svg?label=downloads)](https://www.nuget.org/packages/SpawnDev.BlazorJS.WebWorkers)
+[![Live demo](https://img.shields.io/badge/live%20demo-open-2ea44f.svg)](https://blazorjs.spawndev.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
+[![Sponsor](https://img.shields.io/badge/sponsor-LostBeard-ea4aaa.svg?logo=githubsponsors)](https://github.com/sponsors/LostBeard)
+
+</div>
 
 > SpawnDev libraries are built and maintained by the SpawnDev development team, which uses AI agents in its daily work.
 
